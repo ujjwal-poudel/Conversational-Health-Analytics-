@@ -145,6 +145,7 @@ env.bak/
 venv.bak/
 .DS_Store
 .Trash-0
+data
 
 # Spyder project settings
 .spyderproject
