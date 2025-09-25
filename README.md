@@ -27,6 +27,21 @@ git clone https://github.com/ujjwal-poudel/Conversational-Health-Analytics-.git
 cd Conversational-Health-Analytics
 ```
 
+### Step 4: Create and Activate Virtual Environment
+A virtual environment ensures that all Python packages for this project are kept separate from your global Python installation.
+```bash
+python3 -m venv venv
+
+# On mac
+source venv/bin/activate
+
+# On windows/linux
+venv\Scripts\activate
+
+# Install the requirement.txt (Just for your local machine)
+pip install -r backend/requirements.txt
+```
+
 ### Step 4: Build the Docker Image
 
 Make sure Docker Desktop is running. Then, build the Docker image using the following command. This may take a few minutes the first time as it downloads the base images and installs all dependencies.
@@ -44,10 +59,26 @@ Follow these steps each time you start working on the project.
 
 Before you start working, always pull the latest changes from the `main` branch to make sure your local repository is up to date with your teammates' work.
 ```bash
+# First, ensure you are on the main branch
+git checkout main
+
+# Then, pull the latest changes
 git pull origin main
+
+# Create new branch here
+# Example branch name: feature/your-name/data-preprocessing
+git checkout -b feature/your-name/task-description
 ```
 
-### Step 2: Run the Project Environment
+### Step 2: Check for Environment Changes & Build if Necessary
+This is an important check. Look to see if the git pull in Step 1 updated the requirements.txt file.
+If requirements.txt was NOT changed, you can skip this step.
+If requirements.txt WAS changed, you must rebuild your Docker image to install the new dependencies:
+```bash
+docker build -t conversational-health-analytics .
+```
+
+### Step 3: Run the Project Environment
 
 This command will start the Docker container, which runs the JupyterLab server and syncs your local project folder.
 
@@ -61,7 +92,7 @@ docker run -p 8888:8888 -v "${PWD}":/app conversational-health-analytics
 docker run -p 8888:8888 -v "%CD%":/app conversational-health-analytics
 ```
 
-### Step 3: Access Jupyter for EDA
+### Step 4: Access Jupyter for EDA
 
 [cite_start]You can now access the Jupyter environment for your **Exploratory Data Analysis (EDA)**[cite: 228].
 
@@ -75,7 +106,7 @@ docker run -p 8888:8888 -v "%CD%":/app conversational-health-analytics
 2.  **Copy the URL** (As said in option A) with the token from your terminal.
 3.  In VS Code, open your `.ipynb` notebook, click **"Select Kernel"** > **"Existing Jupyter Server,"** and paste the URL (Remember this is not the url of the extensions).
 
-### Step 4: Stop the Container
+### Step 5: Stop the Container
 
 When you are finished with your work session, you need to stop the running container.
 
@@ -90,19 +121,15 @@ This will gracefully shut down the Jupyter server and stop the container.
 
 To ensure we can all work in parallel without conflicts, please follow this feature branching workflow. [cite_start]This is a standard team collaboration method for projects using GitHub[cite: 104].
 
-### Step 1: Create a New Branch for Your Task
-
-Before starting any new work, create a new branch from the `main` branch. Use a descriptive name for your branch. feature = Specific change done in the commit (It's like a title), your-name = example: Ibrahim, task-description : a-short-description-of-task-you-did. Always remember to create a branch before you push the code
-```bash
-# Example branch name: feature/your-name/data-preprocessing
-git checkout -b feature/your-name/task-description
-```
-
-### Step 2: Make and Save Changes (Add & Commit)
+### Step 1: Make and Save Changes (Add & Commit)
 
 Work on your task. When you are ready to save your progress, you need to "add" your changed files and "commit" them with a clear message.
 
 ```bash
+# First update the requirement.txt file, if you add any new packages
+# Also let the team know, you added new package and tell them to run docker build when they start
+pip freeze > backend/requirements.txt
+
 # To add ALL changed files in the current directory
 git add .
 
@@ -113,7 +140,7 @@ git add path/to/your/file.py
 git commit -m "feat: Add initial data cleaning script for transcripts"
 ```
 
-### Step 3: Push Your Branch to GitHub
+### Step 2: Push Your Branch to GitHub
 
 The first time you push a new branch, you need to set its "upstream" remote.
 ```bash
@@ -121,7 +148,7 @@ git push --set-upstream origin feature/your-name/task-description
 ```
 For any subsequent pushes on the same branch, you can simply use `git push`.
 
-### Step 4: Open a Pull Request
+### Step 3: Open a Pull Request
 
 Go to the GitHub repository in your browser. GitHub will automatically detect your new branch and prompt you to **"Open a Pull Request."** Fill out the details, assign at least one other team member to review your code, and then merge it into `main` after approval.
 
