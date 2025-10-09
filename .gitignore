@@ -160,6 +160,7 @@ venv.bak/
 .DS_Store
 .Trash-0
 data
+.newvenv
 
 # Spyder project settings
 .spyderproject
