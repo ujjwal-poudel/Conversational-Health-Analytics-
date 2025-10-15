@@ -1,3 +1,17 @@
+# Ignore data folders
+data/
+Dataset/
+Docs/
+
+# Ignore notebook checkpoints
+**/.ipynb_checkpoints/
+
+# Ignore cache and temporary files
+__pycache__/
+*.log
+*.tmp
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
