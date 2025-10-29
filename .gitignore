@@ -24,8 +24,8 @@ __pycache__/
 *.so
 
 # random
-.data/
-.models/
+data/
+models/
 
 # Distribution / packaging
 .Python
