@@ -3,6 +3,10 @@ data/
 Dataset/
 Docs/
 
+# model
+models/
+data/
+
 # Ignore notebook checkpoints
 **/.ipynb_checkpoints/
 
