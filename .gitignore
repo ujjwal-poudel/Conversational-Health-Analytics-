@@ -23,6 +23,9 @@ __pycache__/
 # C extensions
 *.so
 
+# random
+.data
+
 # Distribution / packaging
 .Python
 build/
