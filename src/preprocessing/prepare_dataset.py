@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     # Base paths
     BASE_PATH = Path("/Volumes/MACBACKUP/extracted_folders/")
-    OUTPUT_PATH = Path("/Volumes/MACBACKUP/")
+    OUTPUT_PATH = Path("/Volumes/MACBACKUP/Regression")
 
     # Split files
     train_split_path = OUTPUT_PATH / "train_split_Depression_AVEC2017.csv"
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         speech_csv_path=OUTPUT_PATH / "train_participant_speech.csv",
         labels_csv_path=train_split_path,
         output_csv_path=OUTPUT_PATH / "final_datasets/final_train_dataset.csv",
-        label_column="PHQ8_Binary"
+        label_column="PHQ8_Score"
     )
 
     # DEV
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         speech_csv_path=OUTPUT_PATH / "dev_participant_speech.csv",
         labels_csv_path=dev_split_path,
         output_csv_path=OUTPUT_PATH / "final_datasets/final_dev_dataset.csv",
-        label_column="PHQ8_Binary"
+        label_column="PHQ8_Score"
     )
 
     # TEST
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         speech_csv_path=OUTPUT_PATH / "test_participant_speech.csv",
         labels_csv_path=test_split_path,
         output_csv_path=OUTPUT_PATH / "final_datasets/final_test_dataset.csv",
-        label_column="PHQ_Binary"
+        label_column="PHQ_Score"
     )
 
     print("\nAll datasets processed and saved successfully!")
