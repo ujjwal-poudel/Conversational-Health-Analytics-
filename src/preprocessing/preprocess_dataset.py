@@ -1,6 +1,9 @@
 import pandas as pd
 from pathlib import Path
 from typing import Tuple, Optional, List
+import nltk
+nltk.download('punkt')
+nltk.download('punkt_tab')
 
 # Using good practice for optional import
 try:
@@ -93,7 +96,7 @@ class BasePreprocessor:
         print(f"Data prepared. X shape: {X.shape}, y shape: {y.shape}\n")
         return X, y
     
-    def _create_text_chunks(self, text: str, chunk_size: int, overlap: int) -> List[str]:
+    def _create_sliding_window_chunks(self, text: str, chunk_size: int, overlap: int) -> List[str]:
         """
         Private helper method to split a single text into overlapping chunks.
         It uses the 'self.tokenizer' provided by the specific subclass.
@@ -113,33 +116,105 @@ class BasePreprocessor:
             
         return chunks
     
+    def _create_sentence_chunks(self, text: str, chunk_size: int = 510, overlap_sentences: int = 2) -> List[str]:
+        """
+        Private helper: Splits a text into semantically coherent chunks based on
+        sentence boundaries. Uses a fallback to sliding window for single sentences
+        that are too long.
+        
+        Args:
+            text (str): The full text to chunk.
+            chunk_size (int): The target max token size. Using 510 to leave 
+                              room for [CLS] and [SEP] tokens.
+            overlap_sentences (int): How many sentences to overlap between chunks.
+        """
+        # 1. Splits the text into sentences
+        sentences = nltk.sent_tokenize(text)
+        
+        chunks = []
+        current_chunk_sentences = [] # A list to build the current chunk
+        
+        for i, sentence in enumerate(sentences):
+            # Checks token length of the *new* sentence by itself
+            sentence_token_count = len(self.tokenizer.encode(sentence))
+            
+            # Handles edge case: a single sentence is longer than the chunk size
+            if sentence_token_count > chunk_size:
+                # If we have a pending chunk, save it first
+                if current_chunk_sentences:
+                    chunks.append(" ".join(current_chunk_sentences))
+                    current_chunk_sentences = []
+                
+                # For this one very long sentence, fall back to the sliding window
+                # We use a standard 50-token overlap for this fallback.
+                long_sentence_chunks = self._create_sliding_window_chunks(sentence, chunk_size, 50)
+                chunks.extend(long_sentence_chunks)
+                continue # Move to the next sentence
+            
+            # Check if adding the new sentence would exceed the chunk size
+            current_text = " ".join(current_chunk_sentences + [sentence])
+            current_token_length = len(self.tokenizer.encode(current_text))
+            
+            if current_token_length <= chunk_size:
+                # It fits, add it to the current chunk
+                current_chunk_sentences.append(sentence)
+            else:
+                # It doesn't fit. Finalize the previous chunk.
+                chunks.append(" ".join(current_chunk_sentences))
+                
+                # Start the new chunk with an overlap
+                current_chunk_sentences = current_chunk_sentences[-overlap_sentences:] + [sentence]
+        
+        # Add the final remaining chunk
+        if current_chunk_sentences:
+            chunks.append(" ".join(current_chunk_sentences))
+            
+        return chunks
+    
     def chunk_dataframe(self, X_df: pd.DataFrame, y_df: pd.DataFrame, 
-                        chunk_size: int = 512, overlap: int = 50) -> Tuple[pd.DataFrame, pd.DataFrame]:
+                        strategy: str = "sentence_aware",
+                        chunk_size: int = 512, 
+                        overlap: int = 50) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Applies chunking to an entire dataframe. Expands the dataframe so each
-        row represents a single chunk.
+        Applies chunking to an entire dataframe using the specified strategy.
+
+        Args:
+            X_df, y_df: The input features and labels.
+            strategy (str): 'sliding_window' or 'sentence_aware'.
+            chunk_size (int): Max tokens per chunk.
+            overlap (int): For 'sliding_window', this is token overlap.
+                           For 'sentence_aware', this is sentence overlap.
         """
-        print(f"Starting chunking with chunk_size={chunk_size} and overlap={overlap}...")
+        print(f"Starting chunking with strategy: '{strategy}'...")
         # Combines X and y to ensure labels stay aligned with their text
         df = X_df.join(y_df)
         
         new_rows = []
         for _, row in df.iterrows():
             original_text = row['text']
-            # Use the private helper method for chunking
-            text_chunks = self._create_text_chunks(original_text, chunk_size, overlap)
+            label_column = y_df.columns[0]
+            label = row[label_column]
+            
+            if strategy == "sliding_window":
+                text_chunks = self._create_sliding_window_chunks(original_text, chunk_size, overlap)
+            elif strategy == "sentence_aware":
+                # Use 'overlap' as 'overlap_sentences' for this strategy
+                text_chunks = self._create_sentence_chunks(original_text, chunk_size, overlap_sentences=overlap)
+            else:
+                raise ValueError("Unknown chunking strategy. Use 'sliding_window' or 'sentence_aware'.")
             
             for chunk in text_chunks:
-                new_row = row.to_dict() # Copys all original columns (like participant_id)
-                new_row['text'] = chunk # Replaces original text with the chunk
+                new_row = row.to_dict() # Copies all original columns (like participant_id)
+                new_row['text'] = chunk   # Replaces original text with the chunk
+                new_row[label_column] = label # Ensures label is correct
                 new_rows.append(new_row)
         
         chunked_df = pd.DataFrame(new_rows)
         print(f"Chunking complete. Original docs: {len(df)}, Total chunks: {len(chunked_df)}")
 
-        # Separate back into X and y
-        y_chunked = chunked_df[['label']]
-        X_chunked = chunked_df.drop('label', axis=1)
+        # Separates back into X and y
+        y_chunked = chunked_df[[label_column]]
+        X_chunked = chunked_df.drop(label_column, axis=1)
 
         return X_chunked, y_chunked
 
