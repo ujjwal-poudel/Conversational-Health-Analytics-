@@ -1,0 +1,22 @@
+save_dir = "saved_models"
+batch_size = 2
+seed = 2
+five_classes = false
+regularization_loss = false
+loss_l = 0.1
+lr = 3e-5
+num_iters = 100
+encoder_layers_to_freeze = [ ["embeddings"], [0, 1, 2, 3, 4] ]
+
+[model]
+bert_model = "sentence-transformers/all-distilroberta-v1"
+encoder_hidden_dim = 300
+encoder_num_layers = 1
+dropout = 0.5
+num_classes = 8
+attention_type = "hierarchical"
+pooling = "mean"
+binary_only = true
+bidirectional = true
+multilabel = true
+regression = false
