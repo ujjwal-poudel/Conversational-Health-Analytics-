@@ -1,0 +1,10 @@
+{
+  "audio_file": "test_audio.wav",
+  "features": {},
+  "metadata": {
+    "extraction_status": "skipped",
+    "error": null,
+    "reason": "COVAREP module not available"
+  },
+  "extraction_timestamp": "2025-11-06T20:35:58.974437"
+}
