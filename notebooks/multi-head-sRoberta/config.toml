@@ -1,12 +1,13 @@
 save_dir = "saved_models"
-batch_size = 2
+batch_size = 1
 seed = 2
 five_classes = false
 regularization_loss = false
 loss_l = 0.1
 lr = 3e-5
-num_iters = 100
+num_iters = 40
 encoder_layers_to_freeze = [ ["embeddings"], [0, 1, 2, 3, 4] ]
+save_every_epoch = true
 
 [model]
 bert_model = "sentence-transformers/all-distilroberta-v1"

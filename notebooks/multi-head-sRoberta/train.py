@@ -19,6 +19,7 @@ from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 from hdsc.losses import MultiLabelLoss
 from hdsc.model import PHQTotalMulticlassAttentionModelBERT
 from hdsc.utils import save_model
+from tqdm.auto import tqdm
 
 logger = get_logger(__name__)
 logger.setLevel("INFO")
@@ -235,7 +236,18 @@ def main():
         save_dir.mkdir(parents=True)
 
     tokenizer = AutoTokenizer.from_pretrained(config["model"]["bert_model"])
-    dataset = load_dataset("daic_woz.py", "lines")
+
+
+    # the paths to your data files
+    data_files = {
+        "train": "D:/Conversational-Health-Analytics-/data/json/lines/train.jsonl",
+        "validation": "D:/Conversational-Health-Analytics-/data/json/lines/validation.jsonl",
+        "test": "D:/Conversational-Health-Analytics-/data/json/lines/test.jsonl"
+    }
+
+    # Load the dataset directly from the JSONL files
+    dataset = load_dataset("json", data_files=data_files)
+
     encoded_dataset = dataset.map(
         lambda examples: tokenizer(examples["turns"], padding="max_length", truncation=True),
         load_from_cache_file=False,
@@ -290,8 +302,8 @@ def main():
                     param.requires_grad_(False)
 
     accelerator.print(config)
-    model_stats = summary(model, depth=4, verbose=0)
-    accelerator.print(model_stats)
+    # model_stats = summary(model, depth=4, verbose=0)
+    # accelerator.print(model_stats)
 
     best_loss = float("inf")
     best_f1 = 0.0
@@ -315,7 +327,10 @@ def main():
         for epoch in range(config["num_iters"]):
             running_loss = 0.0
             preds = []
-            for batch in train_dataloader:
+
+            progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{config['num_iters']}", leave=False)
+
+            for batch in progress_bar:
                 outputs = training_step(config, model, batch, loss_fn, optimizer, accelerator, scheduler)
 
                 running_loss += outputs["loss"]
@@ -326,6 +341,8 @@ def main():
                 labels_reg.append(outputs["reg_labels"])
 
                 global_step += 1
+
+                progress_bar.set_postfix({"loss": outputs["loss"].item()})
 
                 if global_step % eval_every == 0:
                     eval_outputs = evaluate(config, model, validation_dataloader, loss_fn, accelerator)
@@ -353,13 +370,14 @@ def main():
 
                         dev_labels_bin = (torch.sum(dev_labels, dim=1) >= 10).to(torch.long)
                         dev_preds_bin = (torch.sum(dev_preds, dim=1) >= 10).to(torch.long)
-                        f1_micro = f1_score(dev_preds_bin, dev_labels_bin, average="micro").item()
+                        f1_micro = f1_score(dev_preds_bin, dev_labels_bin, task="binary", average="micro", ).item()
                         f1_macro = f1_score(
                             dev_preds_bin,
                             dev_labels_bin,
+                            task="binary",
                             average="macro",
-                            num_classes=2,
                         ).item()
+
                         f1_samples = f1_score(
                             dev_labels >= 1.5,
                             dev_preds >= 1.5,
@@ -385,13 +403,14 @@ def main():
 
                         dev_labels_bin = (dev_labels >= 10).to(torch.long)
                         dev_preds_bin = (dev_preds >= 10).to(torch.long)
-                        f1_micro = f1_score(dev_preds_bin, dev_labels_bin, average="micro").item()
+                        f1_micro = f1_score(dev_preds_bin, dev_labels_bin, task="binary", average="micro").item()
                         f1_macro = f1_score(
                             dev_preds_bin,
                             dev_labels_bin,
+                            task="binary",
                             average="macro",
-                            num_classes=2,
                         ).item()
+
                         f1_samples = 0.0
                         mae = mean_absolute_error(
                             dev_preds,
@@ -406,12 +425,18 @@ def main():
                         average_train_acc = accuracy(preds.to(torch.long), labels).item()
                         average_dev_acc = accuracy(dev_preds.to(torch.long), dev_labels).item()
 
-                        f1_micro = f1_score(dev_preds.to(torch.long), dev_labels, average="micro").item()
+                        f1_micro = f1_score(
+                            dev_preds.to(torch.long),
+                            dev_labels,
+                            task="multiclass",
+                            average="micro",
+                            num_classes=5,
+                        ).item()
                         f1_macro = f1_score(
                             dev_preds.to(torch.long),
                             dev_labels,
+                            task="multiclass",
                             average="macro",
-                            multiclass=True,
                             num_classes=5,
                         ).item()
 
@@ -423,13 +448,12 @@ def main():
                         average_train_acc = accuracy(preds, labels).item()
                         average_dev_acc = accuracy(dev_preds, dev_labels).item()
 
-                        f1_micro = f1_score(dev_preds, dev_labels, average="micro").item()
+                        f1_micro = f1_score(dev_preds, dev_labels, task="binary", average="micro").item()
                         f1_macro = f1_score(
                             dev_preds,
                             dev_labels,
+                            task="binary",
                             average="macro",
-                            multiclass=True,
-                            num_classes=2,
                         ).item()
 
                         mae = 0.0
