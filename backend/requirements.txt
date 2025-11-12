@@ -7,3 +7,9 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 pydub==0.25.1
+openai-whisper==20231117
+torch>=2.0.0
+transformers>=4.30.0
+sentence-transformers>=2.2.0
+tqdm>=4.65.0
+accelerate>=0.20.0

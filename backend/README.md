@@ -278,6 +278,75 @@ Admin endpoints require JWT authentication. Obtain a token by logging in via `/a
 ]
 ```
 
+#### 8. POST /submit-text-answer
+
+**Description:** Submit text-based answers to questions and get depression score prediction.
+
+**Request Body:**
+```json
+{
+  "questions": [
+    {
+      "id": 1,
+      "mainQuestion": "How are you feeling today?",
+      "answer": "I'm feeling okay, a bit stressed about work.",
+      "subQuestions": [
+        { "id": "1a", "text": "What kind of stress are you experiencing?", "answer": "Work deadlines and pressure from management." },
+        { "id": "1b", "text": "How long have you been feeling this way?", "answer": "About two months now." }
+      ]
+    },
+    {
+      "id": 2,
+      "mainQuestion": "How's your sleep been?",
+      "answer": "Not great, I have trouble falling asleep.",
+      "subQuestions": [
+        { "id": "2a", "text": "Do you wake up during the night?", "answer": "Yes, I wake up around 3 AM and can't go back to sleep." }
+      ]
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "prediction": 21.93
+}
+```
+
+**Data Transformation:**
+The API automatically converts the question/answer format to "turns" format:
+- Takes: `mainQuestion`, `answer`, `subQuestions[].text`, `subQuestions[].answer`
+- Converts to: `["question1", "answer1", "subquestion1", "subanswer1", ...]`
+- Processes through depression scoring model
+- Returns only the prediction score
+
+**Logging:**
+All requests are automatically logged to `user_data/user_data.jsonl` in the format:
+```json
+{
+  "id": "0",
+  "turns": ["question1", "answer1", "subquestion1", "subanswer1", ...],
+  "labels": [21.93]
+}
+```
+
+**Dummy Data:**
+- Request: `POST http://localhost:8000/submit-text-answer`
+  - Body: Sample question/answer JSON as shown above
+- Response:
+```json
+{
+  "prediction": 21.931638341297027
+}
+```
+
+**Current Implementation:**
+- Uses a dummy scoring function for testing
+- Returns random scores between 5.0-25.0
+- Logs all data to JSONL file
+- Increments ID counter starting from 0
+
 ## Data Models
 
 ### User
@@ -323,3 +392,83 @@ Admin endpoints require JWT authentication. Obtain a token by logging in via `/a
 - Transcription uses Whisper tiny model (runs locally)
 - Admin JWT tokens expire after 30 minutes
 - CORS is enabled for all origins (configure for production)
+
+## Replacing the Dummy Depression Scoring Function
+
+The current implementation uses a dummy function for depression scoring. To replace it with the actual model:
+
+### Step 1: Install Dependencies
+```bash
+pip install torch transformers sentence-transformers tqdm accelerate
+```
+
+### Step 2: Update the imports in `app/routers/answer_router.py`
+Replace this line:
+```python
+# For now, use a dummy function to avoid dependency issues
+def get_depression_score_dummy(transcript_turns, model=None, tokenizer=None, device=None, turn_batch_size=16):
+    import random
+    return random.uniform(5.0, 25.0)
+```
+
+With:
+```python
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from src.inference_service import load_artifacts, get_depression_score, set_device
+```
+
+### Step 3: Update the initialize_model() function
+Replace the dummy implementation with:
+```python
+def initialize_model():
+    """Initialize the depression scoring model and tokenizer."""
+    global _model, _tokenizer, _device
+    
+    if _model is not None:
+        return  # Already initialized
+    
+    try:
+        print("Initializing depression scoring model...")
+        _device = set_device()
+        
+        # Update this path to your actual model location
+        model_path = "/path/to/your/model_2_15.pt"
+        
+        _model, _tokenizer = load_artifacts(
+            model_path=model_path,
+            tokenizer_name="sentence-transformers/all-distilroberta-v1",
+            device=_device
+        )
+        print("Depression scoring model initialized successfully")
+        
+    except Exception as e:
+        print(f"Failed to initialize model: {e}")
+        _model = None
+        _tokenizer = None
+        _device = None
+```
+
+### Step 4: Update the API endpoint
+Replace:
+```python
+# Get depression score (using dummy function for testing)
+score = get_depression_score_dummy(transcript_turns, model=_model, tokenizer=_tokenizer, device=_device, turn_batch_size=16)
+```
+
+With:
+```python
+# Get depression score
+score = get_depression_score(
+    transcript_turns=turns,
+    model=_model,
+    tokenizer=_tokenizer,
+    device=_device,
+    turn_batch_size=16
+)
+```
+
+### Step 5: Update model path
+Update the model path in `initialize_model()` to point to your actual trained model file.
+
+The rest of the implementation will work seamlessly with the real model.
