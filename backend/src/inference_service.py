@@ -21,11 +21,34 @@ from typing import List, Tuple
 # 'hdsc/model.py' (or wherever your model class is defined)
 # must be available to this script (e.g., in the same directory
 # or in your project's Python path).
+
+# Add the src directory to Python path for imports
+import sys
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.dirname(current_dir)
+sys.path.insert(0, src_dir)
+
 try:
     from hdsc.model import PHQTotalMulticlassAttentionModelBERT
-except ImportError:
-    print("Error: Could not import 'PHQTotalMulticlassAttentionModelBERT' from 'hdsc.model'.")
-    print("Please make sure the file 'hdsc/model.py' is in your Python path.")
+except ImportError as e:
+    print("=" * 60)
+    print("❌ IMPORT ERROR: Could not import 'PHQTotalMulticlassAttentionModelBERT' from 'hdsc.model'")
+    print("=" * 60)
+    print("🔍 Issue Details:")
+    print(f"   Import Error: {e}")
+    print(f"   Current Python Path: {sys.path}")
+    print(f"   Looking for: {os.path.join(src_dir, 'hdsc/model.py')}")
+    print(f"   File exists: {os.path.exists(os.path.join(src_dir, 'hdsc/model.py'))}")
+    print("")
+    print("💻 For Mac M3 System Setup:")
+    print("   1. Install dependencies: pip install torch transformers accelerate")
+    print("   2. Ensure virtual environment is activated")
+    print("   3. Place model file at: model_2_15.pt")
+    print("   4. The src/hdsc/ directory should contain model.py with the class")
+    print("")
+    print("⚠️  This error will prevent the depression scoring API from working.")
+    print("=" * 60)
     exit(1)
 
 
