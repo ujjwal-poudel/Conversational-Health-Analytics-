@@ -1,19 +1,23 @@
 import { useState, useEffect } from 'react'
-import { FiArrowRight, FiMic } from 'react-icons/fi'
+import { FiArrowRight } from 'react-icons/fi'
 import './Questionnaire.css'
-import AudioRecorder from './AudioRecorder'
+import questionsData from '../data/questions.json'
 
-interface Question {
-  id: number
+interface SubQuestion {
+  id: string
   text: string
-  order: number
+  answer: string
 }
 
-interface Answer {
-  questionId: number
-  text?: string
-  audioUrl?: string
-  audioDuration?: number
+interface QuestionItem {
+  id: number
+  mainQuestion: string
+  answer: string
+  subQuestions: SubQuestion[]
+}
+
+interface QuestionnaireData {
+  questions: QuestionItem[]
 }
 
 interface QuestionnaireProps {
@@ -21,89 +25,153 @@ interface QuestionnaireProps {
 }
 
 const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
-  const [mode, setMode] = useState<'text' | 'audio'>('text')
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Answer[]>([])
-  const [textAnswer, setTextAnswer] = useState('')
+  const [questions, setQuestions] = useState<QuestionItem[]>([])
+  const [currentMainQuestionIndex, setCurrentMainQuestionIndex] = useState(0)
+  const [mainQuestionAnswered, setMainQuestionAnswered] = useState(false)
+  const [subQuestionAnswers, setSubQuestionAnswers] = useState<Record<string, string>>({})
+  const [mainQuestionAnswer, setMainQuestionAnswer] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Fetch questions from backend
-    fetchQuestions()
+    // Load questions from JSON file - NO API CALL
+    loadQuestions()
   }, [])
 
-  const fetchQuestions = async () => {
+  const loadQuestions = () => {
     try {
-      const response = await fetch('/api/questions')
-      const data = await response.json()
-      setQuestions(data)
+      const data = questionsData as QuestionnaireData
+      // Initialize all answers as empty strings
+      const initializedQuestions = data.questions.map(q => ({
+        ...q,
+        answer: '',
+        subQuestions: q.subQuestions.map(sq => ({ ...sq, answer: '' }))
+      }))
+      setQuestions(initializedQuestions)
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching questions:', error)
-      // Fallback to default questions
-      setQuestions([
-        { id: 1, text: "Can you tell me about things you used to enjoy — hobbies, outings, or small pleasures — and whether you still find them enjoyable?", order: 1 },
-        { id: 2, text: "When did you first notice a change?", order: 2 },
-        { id: 3, text: "How has your sleep been lately?", order: 3 },
-        { id: 4, text: "Have you noticed any changes in your appetite or weight?", order: 4 },
-        { id: 5, text: "How would you describe your energy levels?", order: 5 }
-      ])
+      console.error('Error loading questions:', error)
       setLoading(false)
     }
   }
 
-  const handleTextContinue = () => {
-    if (textAnswer.trim()) {
-      const newAnswer: Answer = {
-        questionId: questions[currentQuestionIndex].id,
-        text: textAnswer
-      }
-      
-      setAnswers([...answers, newAnswer])
-      
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1)
-        setTextAnswer('')
-      } else {
-        // All questions answered, submit and show results
-        submitAnswers([...answers, newAnswer])
-      }
-    }
+  const handleMainQuestionAnswer = (value: string) => {
+    setMainQuestionAnswer(value)
   }
 
-  const handleAudioComplete = (audioBlob: Blob, duration: number) => {
-    const audioUrl = URL.createObjectURL(audioBlob)
-    const newAnswer: Answer = {
-      questionId: questions[currentQuestionIndex].id,
-      audioUrl: audioUrl,
-      audioDuration: duration
-    }
-    
-    setAnswers([...answers, newAnswer])
-    
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
+  const handleSubQuestionAnswer = (subQuestionId: string, value: string) => {
+    setSubQuestionAnswers(prev => ({
+      ...prev,
+      [subQuestionId]: value
+    }))
+  }
+
+  const handleContinue = () => {
+    if (!mainQuestionAnswered) {
+      // Save main question answer
+      if (mainQuestionAnswer.trim()) {
+        const updatedQuestions = [...questions]
+        updatedQuestions[currentMainQuestionIndex].answer = mainQuestionAnswer
+        setQuestions(updatedQuestions)
+        setMainQuestionAnswered(true)
+      }
     } else {
-      // All questions answered, submit and show results
-      submitAnswers([...answers, newAnswer])
+      // Check if all sub-questions are answered
+      const currentMainQ = questions[currentMainQuestionIndex]
+      const allSubQuestionsAnswered = currentMainQ.subQuestions.every(sq => 
+        subQuestionAnswers[sq.id] && subQuestionAnswers[sq.id].trim()
+      )
+
+      if (allSubQuestionsAnswered) {
+        // Save sub-question answers
+        const updatedQuestions = [...questions]
+        currentMainQ.subQuestions.forEach(sq => {
+          sq.answer = subQuestionAnswers[sq.id] || ''
+        })
+        setQuestions(updatedQuestions)
+
+        // Move to next question or submit
+        if (currentMainQuestionIndex < questions.length - 1) {
+          setCurrentMainQuestionIndex(currentMainQuestionIndex + 1)
+          setMainQuestionAnswered(false)
+          setMainQuestionAnswer('')
+          setSubQuestionAnswers({})
+        } else {
+          // Last question - submit all answers
+          submitAnswers(updatedQuestions)
+        }
+      }
     }
   }
 
-  const submitAnswers = async (allAnswers: Answer[]) => {
-    // Here you would send answers to backend
-    // For now, calculate a mock depression score
-    const mockScore = Math.floor(Math.random() * 20) + 10 // Random score between 10-30
-    
-    // Simulate API delay
-    setTimeout(() => {
+  const submitAnswers = async (allQuestions: QuestionItem[]) => {
+    try {
+      // Convert to backend-compatible format (flatten main + sub questions)
+      const questionsAndAnswers: any[] = []
+      let questionCounter = 1
+      
+      allQuestions.forEach(mainQ => {
+        // Add main question
+        questionsAndAnswers.push({
+          question_id: questionCounter++,
+          question_text: mainQ.mainQuestion,
+          answer_text: mainQ.answer || ""
+        })
+        
+        // Add sub-questions
+        mainQ.subQuestions.forEach(subQ => {
+          questionsAndAnswers.push({
+            question_id: questionCounter++,
+            question_text: subQ.text,
+            answer_text: subQ.answer || ""
+          })
+        })
+      })
+
+      // Backend-compatible request format
+      const backendRequest = {
+        user_name: 'User',
+        questions_and_answers: questionsAndAnswers
+      }
+
+      // ONLY 1 API CALL - when user clicks submit
+      const response = await fetch('/api/submit-text-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backendRequest)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get prediction from backend')
+      }
+
+      const result = await response.json()
+      
+      // Extract prediction score from response
+      const predictionScore = result.prediction || 0
+      onComplete(Number(predictionScore))
+
+    } catch (error) {
+      console.error('Error getting prediction:', error)
+      // Fallback to mock score on error
+      const mockScore = Math.floor(Math.random() * 20) + 10
       onComplete(mockScore)
-    }, 500)
+    }
   }
 
-  const progressPercentage = questions.length > 0 
-    ? ((currentQuestionIndex + 1) / questions.length) * 100 
-    : 0
+  const canContinue = () => {
+    if (!mainQuestionAnswered) {
+      return mainQuestionAnswer.trim().length > 0
+    } else {
+      const mainQ = questions[currentMainQuestionIndex]
+      return mainQ.subQuestions.every(sq => 
+        subQuestionAnswers[sq.id] && subQuestionAnswers[sq.id].trim()
+      )
+    }
+  }
+
+  const isLastQuestion = currentMainQuestionIndex === questions.length - 1
 
   if (loading) {
     return (
@@ -127,25 +195,21 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
     )
   }
 
-  const currentQuestion = questions[currentQuestionIndex]
+  const currentMainQuestion = questions[currentMainQuestionIndex]
+  const totalQuestions = questions.reduce((total, q) => total + 1 + q.subQuestions.length, 0)
+  const currentQuestionNumber = questions.slice(0, currentMainQuestionIndex).reduce((count, q) => 
+    count + 1 + q.subQuestions.length, 0
+  ) + (mainQuestionAnswered ? 1 + currentMainQuestion.subQuestions.filter(sq => 
+    subQuestionAnswers[sq.id] && subQuestionAnswers[sq.id].trim()
+  ).length : 1)
+  const progressPercentage = (currentQuestionNumber / totalQuestions) * 100
 
   return (
     <div className="questionnaire-card">
       <div className="questionnaire-header">
         <h2>Personal Health Questionnaire</h2>
-        <div className="mode-toggle">
-          <button
-            className={`mode-btn ${mode === 'text' ? 'active' : ''}`}
-            onClick={() => setMode('text')}
-          >
-            Text
-          </button>
-          <button
-            className={`mode-btn ${mode === 'audio' ? 'active' : ''}`}
-            onClick={() => setMode('audio')}
-          >
-            Audio
-          </button>
+        <div className="progress-info">
+          Question {currentQuestionNumber} of {totalQuestions}
         </div>
       </div>
       
@@ -157,60 +221,60 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
       </div>
 
       <div className="questions-container">
-        {/* Show previous answers */}
-        {answers.map((answer, index) => (
-          <div key={index} className="answered-question">
-            <div className="question-number">{index + 1}</div>
-            <div className="question-content">
-              <p className="question-text">{questions[index].text}</p>
-              {answer.text && (
-                <div className="answer-display">
-                  <p>{answer.text}</p>
-                </div>
-              )}
-              {answer.audioUrl && (
-                <div className="audio-display">
-                  <audio controls src={answer.audioUrl} />
-                  <span className="audio-duration">
-                    {Math.floor(answer.audioDuration || 0)}s
-                  </span>
-                </div>
-              )}
+        {/* Main Question */}
+        <div className="main-question">
+          <div className="question-number">{currentMainQuestionIndex + 1}</div>
+          <div className="question-content">
+            <p className="question-text">{currentMainQuestion.mainQuestion}</p>
+            
+            <div className="text-input-container">
+              <textarea
+                className="text-input"
+                placeholder="Type your answer..."
+                value={mainQuestionAnswer}
+                onChange={(e) => handleMainQuestionAnswer(e.target.value)}
+                rows={4}
+                disabled={mainQuestionAnswered}
+              />
             </div>
           </div>
-        ))}
+        </div>
 
-        {/* Current question */}
-        <div className="current-question">
-          <div className="question-number active">{currentQuestionIndex + 1}</div>
-          <div className="question-content">
-            <p className="question-text">{currentQuestion.text}</p>
-            
-            {mode === 'text' ? (
-              <div className="text-input-container">
-                <textarea
-                  className="text-input"
-                  placeholder="Type your answer..."
-                  value={textAnswer}
-                  onChange={(e) => setTextAnswer(e.target.value)}
-                  rows={4}
-                />
-                <button
-                  className="continue-btn"
-                  onClick={handleTextContinue}
-                  disabled={!textAnswer.trim()}
-                >
-                  {currentQuestionIndex < questions.length - 1 ? 'Continue' : 'Submit'}
-                  <FiArrowRight />
-                </button>
+        {/* Sub-questions - shown after main question is answered */}
+        {mainQuestionAnswered && (
+          <div className="sub-questions-container">
+            {currentMainQuestion.subQuestions.map((subQ, index) => (
+              <div key={subQ.id} className="sub-question">
+                <div className="question-number">
+                  {currentMainQuestionIndex + 1}{String.fromCharCode(97 + index)}
+                </div>
+                <div className="question-content">
+                  <p className="question-text">{subQ.text}</p>
+                  <div className="text-input-container">
+                    <textarea
+                      className="text-input"
+                      placeholder="Type your answer..."
+                      value={subQuestionAnswers[subQ.id] || ''}
+                      onChange={(e) => handleSubQuestionAnswer(subQ.id, e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                </div>
               </div>
-            ) : (
-              <AudioRecorder 
-                key={currentQuestionIndex} 
-                onComplete={handleAudioComplete} 
-              />
-            )}
+            ))}
           </div>
+        )}
+
+        {/* Continue/Submit Button */}
+        <div className="continue-container">
+          <button
+            className="continue-btn"
+            onClick={handleContinue}
+            disabled={!canContinue()}
+          >
+            {isLastQuestion && mainQuestionAnswered ? 'Submit' : 'Continue'}
+            <FiArrowRight />
+          </button>
         </div>
       </div>
     </div>
@@ -218,4 +282,3 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
 }
 
 export default Questionnaire
-
