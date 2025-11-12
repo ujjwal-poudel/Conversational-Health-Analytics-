@@ -30,6 +30,7 @@ __pycache__/
 # random
 data/
 models/
+*.jsonl
 
 # Distribution / packaging
 .Python
