@@ -10,14 +10,16 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 import whisper
 
-# For now, use a dummy function to avoid dependency issues
-def get_depression_score_dummy(transcript_turns, model=None, tokenizer=None, device=None, turn_batch_size=16):
-    """
-    Dummy depression scoring function for testing.
-    Returns a random score between 5-25 for demonstration.
-    """
-    import random
-    return random.uniform(5.0, 25.0)
+# Import actual inference functions
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# Import the actual functions
+import torch
+from transformers import AutoTokenizer
+from src.inference_service import load_artifacts, get_depression_score, set_device
+
+print("Real depression scoring model loaded successfully")
 
 router = APIRouter()
 
@@ -34,6 +36,46 @@ _model = None
 _tokenizer = None
 _device = None
 _id_counter = 0
+
+def get_next_id():
+    """Get the next available ID by reading the current state from JSONL file."""
+    global _id_counter
+    
+    # If counter is already set, just increment and return
+    if _id_counter > 0:
+        _id_counter += 1
+        return str(_id_counter - 1)
+    
+    # Otherwise, read the JSONL file to find the last used ID
+    try:
+        if os.path.exists(USER_DATA_FILE):
+            last_id = -1
+            with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        data = json.loads(line)
+                        if 'id' in data:
+                            try:
+                                current_id = int(data['id'])
+                                if current_id > last_id:
+                                    last_id = current_id
+                            except ValueError:
+                                continue
+            
+            # Set counter to continue from the next ID
+            _id_counter = last_id + 1
+            print(f"Resuming from ID: {_id_counter}")
+        else:
+            _id_counter = 0
+            
+    except Exception as e:
+        print(f"Error reading ID counter: {e}")
+        _id_counter = 0
+    
+    # Return the current ID and increment for next time
+    current_id = str(_id_counter)
+    _id_counter += 1
+    return current_id
 
 # Define the input models
 class SubQuestion(BaseModel):
@@ -62,25 +104,42 @@ except Exception as e:
     whisper_model = None
 
 def initialize_model():
-    """Initialize dummy depression scoring (for testing)."""
+    """Initialize the depression scoring model and tokenizer."""
     global _model, _tokenizer, _device
     
     if _model is not None:
         return  # Already initialized
     
     try:
-        print("Initializing dummy depression scoring model for testing...")
-        # Set dummy values for testing
-        _model = "dummy_model"
-        _tokenizer = "dummy_tokenizer"
-        _device = "cpu"
-        print("Dummy model initialized successfully")
+        print("Initializing depression scoring model...")
+        _device = set_device()
+        
+        # Try different possible model paths
+        possible_paths = [
+            "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_15.pt",
+            "models/robert_multilabel_no-regression_/model_2_15.pt",
+            "model_2_15.pt"
+        ]
+        
+        model_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                model_path = path
+                break
+        
+        if model_path is None:
+            raise FileNotFoundError(f"Model file not found. Tried paths: {possible_paths}")
+        
+        _model, _tokenizer = load_artifacts(
+            model_path=model_path,
+            tokenizer_name="sentence-transformers/all-distilroberta-v1",
+            device=_device
+        )
+        print("Depression scoring model initialized successfully")
         
     except Exception as e:
         print(f"Failed to initialize model: {e}")
-        _model = None
-        _tokenizer = None
-        _device = None
+        raise e  # Re-raise the exception - no fallback
 
 def transform_to_turns(questions_data: QuestionAnswerRequest) -> List[str]:
     """Transform question/answer JSON to turns format."""
@@ -178,8 +237,6 @@ def submit_text_answer(
     """
     Submit text-based answers and get depression score prediction.
     """
-    global _id_counter
-    
     # Initialize model if not already done
     if _model is None:
         initialize_model()
@@ -191,8 +248,8 @@ def submit_text_answer(
         # Transform question/answer data to turns format
         turns = transform_to_turns(request)
         
-        # Get depression score (using dummy function for testing)
-        score = get_depression_score_dummy(
+        # Get depression score using the actual function
+        score = get_depression_score(
             transcript_turns=turns,
             model=_model,
             tokenizer=_tokenizer,
@@ -200,12 +257,9 @@ def submit_text_answer(
             turn_batch_size=16
         )
         
-        # Save to JSONL
-        current_id = str(_id_counter)
+        # Get persistent ID (continues from previous session)
+        current_id = get_next_id()
         save_to_jsonl(current_id, turns, score)
-        
-        # Increment counter
-        _id_counter += 1
         
         # Return only prediction
         return PredictionResponse(prediction=score)

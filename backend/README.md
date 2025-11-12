@@ -342,8 +342,9 @@ All requests are automatically logged to `user_data/user_data.jsonl` in the form
 ```
 
 **Current Implementation:**
-- Uses a dummy scoring function for testing
-- Returns random scores between 5.0-25.0
+- Uses the actual `get_depression_score` function from `src/inference_service.py`
+- No fallback - requires all dependencies to be installed
+- Uses real ML model for depression scoring
 - Logs all data to JSONL file
 - Increments ID counter starting from 0
 
@@ -441,7 +442,7 @@ def initialize_model():
             device=_device
         )
         print("Depression scoring model initialized successfully")
-        
+      
     except Exception as e:
         print(f"Failed to initialize model: {e}")
         _model = None
