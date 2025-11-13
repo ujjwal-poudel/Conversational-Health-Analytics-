@@ -33,21 +33,21 @@ try:
     from hdsc.model import PHQTotalMulticlassAttentionModelBERT
 except ImportError as e:
     print("=" * 60)
-    print("❌ IMPORT ERROR: Could not import 'PHQTotalMulticlassAttentionModelBERT' from 'hdsc.model'")
+    print(" IMPORT ERROR: Could not import 'PHQTotalMulticlassAttentionModelBERT' from 'hdsc.model'")
     print("=" * 60)
-    print("🔍 Issue Details:")
+    print(" Issue Details:")
     print(f"   Import Error: {e}")
     print(f"   Current Python Path: {sys.path}")
     print(f"   Looking for: {os.path.join(src_dir, 'hdsc/model.py')}")
     print(f"   File exists: {os.path.exists(os.path.join(src_dir, 'hdsc/model.py'))}")
     print("")
-    print("💻 For Mac M3 System Setup:")
+    print(" For Mac M3 System Setup:")
     print("   1. Install dependencies: pip install torch transformers accelerate")
     print("   2. Ensure virtual environment is activated")
     print("   3. Place model file at: model_2_15.pt")
     print("   4. The src/hdsc/ directory should contain model.py with the class")
     print("")
-    print("⚠️  This error will prevent the depression scoring API from working.")
+    print("  This error will prevent the depression scoring API from working.")
     print("=" * 60)
     exit(1)
 
@@ -192,7 +192,6 @@ def get_depression_score(
     # This is the `sentence_embeddings` tensor from your model.py
     sentence_embeddings = torch.cat(all_sentence_embeddings, dim=0).to(device)
     
-    # --- From here, we execute the *second half* of your model's logic ---
     
     # 3. Create the Hierarchical (LSTM) Batch
     # This is the logic from your model.py's forward method
