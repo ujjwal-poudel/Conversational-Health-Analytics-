@@ -105,36 +105,13 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
 
   const submitAnswers = async (allQuestions: QuestionItem[]) => {
     try {
-      // Convert to backend-compatible format (flatten main + sub questions)
-      const questionsAndAnswers: any[] = []
-      let questionCounter = 1
-      
-      allQuestions.forEach(mainQ => {
-        // Add main question
-        questionsAndAnswers.push({
-          question_id: questionCounter++,
-          question_text: mainQ.mainQuestion,
-          answer_text: mainQ.answer || ""
-        })
-        
-        // Add sub-questions
-        mainQ.subQuestions.forEach(subQ => {
-          questionsAndAnswers.push({
-            question_id: questionCounter++,
-            question_text: subQ.text,
-            answer_text: subQ.answer || ""
-          })
-        })
-      })
-
-      // Backend-compatible request format
+      // Send in the same format as questions.json
       const backendRequest = {
-        user_name: 'User',
-        questions_and_answers: questionsAndAnswers
+        questions: allQuestions
       }
 
       // ONLY 1 API CALL - when user clicks submit
-      const response = await fetch('/api/submit-text-answer', {
+      const response = await fetch('http://127.0.0.1:8000/submit-text-answer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,6 +124,9 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
       }
 
       const result = await response.json()
+      
+      // Print the full API response to console
+      console.log('API Response:', result)
       
       // Extract prediction score from response
       const predictionScore = result.prediction || 0
