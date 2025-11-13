@@ -67,7 +67,7 @@ const Results: React.FC<ResultsProps> = ({ score }) => {
               fontWeight="600"
               fill="#333"
             >
-              {score}
+              {score.toFixed(2)}
             </text>
           </svg>
           
