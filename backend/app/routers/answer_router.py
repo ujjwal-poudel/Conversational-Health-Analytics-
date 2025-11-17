@@ -20,6 +20,11 @@ import torch
 from transformers import AutoTokenizer
 from src.inference_service import load_artifacts, get_depression_score, set_device
 
+# -- Modification --
+# (Ujjwal) added import for semantic classifier
+from src.semantic_inference import get_semantic_classifier
+# -- End of Modification --
+
 print("Real depression scoring model loaded successfully")
 
 router = APIRouter()
@@ -95,6 +100,12 @@ class QuestionAnswerRequest(BaseModel):
 
 class PredictionResponse(BaseModel):
     prediction: float
+    
+    # -- Modified --
+    # (Ujjwal) Added the semantic risk label and consistency_status
+    semantic_risk_label: str
+    consistency_status: str  # 'agreement', 'uncertainty', 'conflict'
+    # -- End of Modification --
 
 # Load Whisper model (tiny model for faster processing and lower resource usage)
 try:
@@ -103,7 +114,108 @@ try:
 except Exception as e:
     print(f"Failed to load Whisper model: {e}")
     whisper_model = None
+    
+"""
+Function to combine the regression model with semantic similarity analysis
+"""
+def analyze_with_semantic_guardrails(
+    turns: List[str], 
+    regression_score: float
+) -> Tuple[float, str, str, float, float]:
+    """
+    Combines the primary Regression Model score with a secondary Semantic Similarity analysis
+    to act as a safety guardrail.
 
+    Args:
+        turns (List[str]): The list of conversation turns (questions and answers).
+        regression_score (float): The raw score output from the main regression model.
+
+    Returns:
+        Tuple containing:
+        1. Final Score (float): The score to show the user (usually the regression score).
+        2. Semantic Label (str): "High Risk" or "Low Risk" based on semantic similarity.
+        3. Consistency Status (str): A tag describing if models agreed or conflicted.
+        4. Similarity to Healthy (float): Raw cosine similarity to the 'Healthy' prototype.
+        5. Similarity to Depressed (float): Raw cosine similarity to the 'Depressed' prototype.
+    """
+    
+    # --- STEP 1: Perform Semantic Analysis ---
+    try:
+        # Join the list of turns into one single string for embedding
+        full_text = " ".join(turns)
+        
+        # Load the singleton semantic classifier
+        classifier = get_semantic_classifier()
+        
+        # Get the prediction dictionary
+        semantic_result = classifier.predict(full_text)
+        
+        # Extract the raw data points
+        sim_0 = semantic_result["similarity_class_0"] # Similarity to 'Healthy' prototype
+        sim_1 = semantic_result["similarity_class_1"] # Similarity to 'Depressed' prototype
+        semantic_class = semantic_result["predicted_class"] # 0 for Healthy, 1 for Depressed
+        label = semantic_result["predicted_label"] # Text label for display
+        
+        # Calculate "Confidence Margin":
+        # If sim_0 is 0.45 and sim_1 is 0.46, the margin is 0.01 (Very Low Confidence).
+        # If sim_0 is 0.20 and sim_1 is 0.70, the margin is 0.50 (Very High Confidence).
+        confidence_margin = abs(sim_1 - sim_0)
+        
+    except Exception as e:
+        # ERROR HANDLING: If the semantic check fails (e.g., file missing),
+        # we do NOT stop the app. We fail safely by returning the regression score.
+        print(f"Semantic Analysis Failed: {e}")
+        return regression_score, "N/A", "semantic_failed", 0.0, 0.0
+
+    # --- STEP 2: Standardize the Regression Output ---
+    # We convert the continuous regression score (e.g., 8.5 or 12.3) into a binary class
+    # using the standard PHQ-8 threshold of 10.
+    regression_class = 1 if regression_score >= 10 else 0
+    
+    # Default status
+    status = "processed"
+
+    # --- STEP 3: The Logic Gates (Guardrails) ---
+    
+    # GATE 1: Low Confidence Check
+    # If the semantic model is "unsure" (the text is ambiguous and equally similar to both),
+    # we should NOT let it override or flag the main model.
+    # We trust the Regression Model completely in this case.
+    if confidence_margin < 0.05:
+        status = "agreement_low_confidence"
+        return regression_score, label, status, sim_0, sim_1
+
+    # GATE 2: Agreement Check
+    # Ideally, both models agree (e.g., both say "High Risk" or both say "Low Risk").
+    # This validates our prediction and gives us high confidence.
+    if semantic_class == regression_class:
+        status = "strong_agreement"
+        return regression_score, label, status, sim_0, sim_1
+
+    # GATE 3: Handling Conflicts (The Models Disagree)
+    
+    # Case A: Semantic says DEPRESSED (1), but Regression says HEALTHY (0)
+    # This is a potential FALSE NEGATIVE. 
+    # The user's words are semantically close to "depressed" text, 
+    # but the regression model calculated a low score (e.g., 8 or 9).
+    if semantic_class == 1 and regression_class == 0:
+        status = "conflict_potential_false_negative"
+        # We return the Regression Score (because it's the primary clinical tool),
+        # but the 'status' flag warns us to review this case manually or treat it with caution.
+        return regression_score, "High Risk (Semantic)", status, sim_0, sim_1
+
+    # Case B: Semantic says HEALTHY (0), but Regression says DEPRESSED (1)
+    # This is a potential FALSE POSITIVE.
+    # The user sounds "normal" semantically, but scored high on the clinical scale.
+    # In medical contexts, we prefer False Positives over False Negatives (better safe than sorry).
+    # We stick with the High Score to ensure the user gets help if needed.
+    if semantic_class == 0 and regression_class == 1:
+        status = "conflict_potential_false_positive"
+        return regression_score, "Low Risk (Semantic)", status, sim_0, sim_1
+
+    # Fallback return (should theoretically not be reached given logic above)
+    return regression_score, label, status, sim_0, sim_1
+    
 def initialize_model():
     """Initialize the depression scoring model and tokenizer."""
     global _model, _tokenizer, _device
@@ -230,6 +342,7 @@ def get_audio(filename: str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, media_type="audio/wav")
+
 @router.post("/submit-text-answer", response_model=PredictionResponse)
 def submit_text_answer(
     request: QuestionAnswerRequest,
@@ -250,7 +363,7 @@ def submit_text_answer(
         turns = transform_to_turns(request)
         
         # Get depression score using the actual function
-        score = get_depression_score(
+        raw_score = get_depression_score(
             transcript_turns=turns,
             model=_model,
             tokenizer=_tokenizer,
@@ -258,12 +371,47 @@ def submit_text_answer(
             turn_batch_size=16
         )
         
+        # --- Modification ---
+        # (Ujjwal) Applying semantic guardrail function
+        
+        final_score, sem_label, status, sim_0, sim_1 = analyze_with_semantic_guardrails(turns, raw_score)
+        
+        # DETAILED TERMINAL LOGGING
+        print("\n" + "#"*60)
+        print(" FINAL DECISION REPORT ".center(60, "#"))
+        print("#"*60)
+        print(f"1. RAW REGRESSION MODEL:")
+        print(f"   Score: {raw_score:.4f}")
+        print(f"   Class: {'Depressed (>=10)' if raw_score >= 10 else 'Healthy (<10)'}")
+        print("-" * 60)
+        print(f"2. SEMANTIC GUARDRAIL:")
+        print(f"   Healthy Similarity:   {sim_0:.4f}")
+        print(f"   Depressed Similarity: {sim_1:.4f}")
+        print(f"   Semantic Label:       {sem_label}")
+        print("-" * 60)
+        print(f"3. CONSISTENCY CHECK:")
+        print(f"   Status: {status.upper()}")
+        
+        if "conflict" in status:
+             print(f" WARNING: Models Disagree! Returning Regression Score with Flag.")
+        elif "agreement" in status:
+             print(f" SUCCESS: Models Agree.")
+        
+        print("-" * 60)
+        print(f"   >>> FINAL RETURNED SCORE: {final_score:.4f}")
+        print("#"*60 + "\n")
+        
         # Get persistent ID (continues from previous session)
         current_id = get_next_id()
-        save_to_jsonl(current_id, turns, score)
+        save_to_jsonl(current_id, turns, final_score)
         
-        # Return only prediction
-        return PredictionResponse(prediction=score)
+        # Returns full prediction
+        return PredictionResponse(
+            prediction=final_score,
+            semantic_risk_label=sem_label,
+            consistency_status=status
+        )
+        # --- End of Modification ---
         
     except Exception as e:
         print(f"Error processing text answer: {e}")
