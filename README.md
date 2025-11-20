@@ -1,166 +1,122 @@
 # Conversational Health Analytics
 
-This is the official repository for the AI Capstone Project, "Conversational Health Analytics." This project aims to develop a full-stack application that leverages multi-modal AI to analyze conversational data (text and audio) to identify linguistic and acoustic biomarkers associated with depression, serving as an assistive tool for clinicians. [cite_start]This project is developed to meet the requirements of the COMP 385 AI Capstone Project[cite: 1].
+This is the official repository for the AI Capstone Project, "Conversational Health Analytics." This project aims to develop a full-stack application that leverages multi-modal AI to analyze conversational data (text and audio) to identify linguistic and acoustic biomarkers associated with depression, serving as an assistive tool for clinicians.
+
+## Tech Stack
+- **Backend**: FastAPI, Python
+- **Frontend**: React, Vite, TypeScript
+- **AI/ML**: PyTorch, OpenAI Whisper, Transformers
+- **Database/Infrastructure**: SQLAlchemy, Docker
 
 ---
 
-## Getting Started (One-Time Setup)
+## Getting Started
 
-Follow these steps to get the project running on your local machine for the first time. [cite_start]This ensures a consistent and reproducible setup for all team members, a key requirement for this project[cite: 201].
+Follow these steps to get the project running on your local machine.
 
-### Step 1: Prerequisites
-
-Ensure you have the following software installed on your computer:
+### Prerequisites
+Ensure you have the following software installed:
 * [Git](https://git-scm.com/downloads)
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-### Step 2: Clone the Repository
-
-First, clone this repository to your computer using the repository's URL:
+### 1. Clone the Repository
+Clone this repository to your local machine:
 ```bash
 git clone https://github.com/ujjwal-poudel/Conversational-Health-Analytics-.git
+cd Conversational-Health-Analytics-
 ```
 
-### Step 3: Navigate into the Directory
+### 2. Local Development Setup
 
-```bash
-cd Conversational-Health-Analytics
-```
+**Backend Setup:**
+1. Navigate to the project root.
+2. Create a virtual environment:
+   ```bash
+   python3 -m venv venv
+   ```
+3. Activate the virtual environment:
+   - macOS/Linux: `source venv/bin/activate`
+   - Windows: `venv\Scripts\activate`
+4. Install dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
 
-### Step 4: Create and Activate Virtual Environment
-A virtual environment ensures that all Python packages for this project are kept separate from your global Python installation.
-```bash
-python3 -m venv venv
-
-# On mac
-source venv/bin/activate
-
-# On windows/linux
-venv\Scripts\activate
-
-# Install the requirement.txt (Just for your local machine)
-pip install -r backend/requirements.txt
-```
-
-### Step 4: Build the Docker Image
-
-Make sure Docker Desktop is running. Then, build the Docker image using the following command. This may take a few minutes the first time as it downloads the base images and installs all dependencies.
-```bash
-docker build -t conversational-health-analytics .
-```
+**Frontend Setup:**
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   # OR if you use yarn
+   yarn
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
 ---
 
-## Daily Development Workflow
+## Contribution Workflow
 
-Follow these steps each time you start working on the project.
+We follow a feature branching workflow. Please follow these steps for every contribution.
 
-### Step 1: Get the Latest Updates
+### 1. Create a Branch
+**Naming Convention:**
+- Features: `feature/<your-name>/<short-description>`
+- Fixes: `fix/<your-name>/<issue-description>`
 
-Before you start working, always pull the latest changes from the `main` branch to make sure your local repository is up to date with your teammates' work.
+**Create and switch to your branch:**
 ```bash
-# First, ensure you are on the main branch
+# Make sure you are on main and up to date
 git checkout main
-
-# Then, pull the latest changes
 git pull origin main
 
-# Create new branch here
-# Example branch name: feature/your-name/data-preprocessing
-git checkout -b feature/your-name/task-description
+# Create your branch
+git checkout -b feature/ujjwal/update-readme
 ```
 
-### Step 2: Check for Environment Changes & Build if Necessary
-This is an important check. Look to see if the git pull in Step 1 updated the requirements.txt file.
-If requirements.txt was NOT changed, you can skip this step.
-If requirements.txt WAS changed, you must rebuild your Docker image to install the new dependencies:
-```bash
-docker build -t conversational-health-analytics .
-```
-
-### Step 3: Run the Project Environment
-
-This command will start the Docker container, which runs the JupyterLab server and syncs your local project folder.
-
-**On macOS or Linux:**
-```bash
-docker run -p 8888:8888 -v "${PWD}":/app conversational-health-analytics
-```
-
-**On Windows (Command Prompt):**
-```bash
-docker run -p 8888:8888 -v "%CD%":/app conversational-health-analytics
-```
-
-### Step 4: Access Jupyter for EDA
-
-[cite_start]You can now access the Jupyter environment for your **Exploratory Data Analysis (EDA)**[cite: 228].
-
-**Option A: Using Your Web Browser**
-1.  Look for the URL in your terminal that looks like this: `http://127.0.0.1:8888/lab?token=a1b2c3d4e5f6...`
-2.  Copy the **entire URL** and paste it into your web browser.
-3.  Navigate to the `notebooks/` folder to start your analysis.
-
-**Option B: Using VS Code (Recommended)**
-1.  **Prerequisites:** Ensure you have these extensions > [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) and [Jupyter](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) extensions from Microsoft installed in VS Code.
-2.  **Copy the URL** (As said in option A) with the token from your terminal.
-3.  In VS Code, open your `.ipynb` notebook, click **"Select Kernel"** > **"Existing Jupyter Server,"** and paste the URL (Remember this is not the url of the extensions).
-
-### Step 5: Stop the Container
-
-When you are finished with your work session, you need to stop the running container.
-
-1.  Go to the terminal window where the container is running.
-2.  Press **`Ctrl + C`** on your keyboard.
-
-This will gracefully shut down the Jupyter server and stop the container.
-
----
-
-## Git & Contribution Workflow
-
-To ensure we can all work in parallel without conflicts, please follow this feature branching workflow. [cite_start]This is a standard team collaboration method for projects using GitHub[cite: 104].
-
-### Step 1: Make and Save Changes (Add & Commit)
-
-Work on your task. When you are ready to save your progress, you need to "add" your changed files and "commit" them with a clear message.
+### 2. Make Changes and Commit
+Make your code changes. When ready, stage and commit them.
 
 ```bash
-# First update the requirement.txt file, if you add any new packages
-# Also let the team know, you added new package and tell them to run docker build when they start
-pip freeze > backend/requirements.txt
-
-# To add ALL changed files in the current directory
+# Stage all changes
 git add .
 
-# OR to add a single specific file
-git add path/to/your/file.py
+# OR stage specific files
+git add README.md
 
-# Commit your changes with a clear, descriptive message
-git commit -m "feat: Add initial data cleaning script for transcripts"
+# Commit with a descriptive message
+git commit -m "docs: Update README with contribution guidelines"
 ```
 
-### Step 2: Push Your Branch to GitHub
+### 3. Push to GitHub
+Push your branch to the remote repository.
 
-The first time you push a new branch, you need to set its "upstream" remote.
 ```bash
-git push --set-upstream origin feature/your-name/task-description
+# The first time you push a new branch
+git push --set-upstream origin feature/ujjwal/update-readme
+
+# Subsequent pushes
+git push
 ```
-For any subsequent pushes on the same branch, you can simply use `git push`.
 
-### Step 3: Open a Pull Request
-
-Go to the GitHub repository in your browser. GitHub will automatically detect your new branch and prompt you to **"Open a Pull Request."** Fill out the details, assign at least one other team member to review your code, and then merge it into `main` after approval.
+### 4. Create a Pull Request (PR)
+1. Go to the [repository on GitHub](https://github.com/ujjwal-poudel/Conversational-Health-Analytics-).
+2. You should see a prompt to "Compare & pull request" for your recently pushed branch.
+3. Click it, fill in the details of your changes, and assign a reviewer.
+4. Wait for approval before merging into `main`.
 
 ---
 
 ## Project Structure
 
-[cite_start]This project follows a standard full-stack application structure, as required for the final submission[cite: 266].
-
-* **`backend/`**: Contains all Python code for the AI model and the API.
-* **`frontend/`**: Contains all code for the user interface.
-* **`data/`**: Used for storing the dataset files (this folder is ignored by Git).
-* **`notebooks/`**: Contains Jupyter notebooks for exploration and analysis.
-* **`docs/`**: Contains all project documentation, such as the proposal and reports.
-* **`Dockerfile`**: The recipe for building our consistent Docker environment.
+* **`backend/`**: FastAPI application and AI model logic.
+* **`frontend/`**: React + Vite user interface.
+* **`data/`**: Dataset storage (git-ignored).
+* **`notebooks/`**: Jupyter notebooks for EDA and experiments.
+* **`docs/`**: Project documentation.
+* **`Dockerfile`**: Environment definition.
