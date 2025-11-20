@@ -1,0 +1,25 @@
+Raw Prototype Model Evaluation
+
+Accuracy: 0.6383
+F1 Score: 0.4138
+
+Confusion Matrix (rows=actual, cols=predicted):
+[[24, 9], [8, 6]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0     0.7500    0.7273    0.7385        33
+           1     0.4000    0.4286    0.4138        14
+
+    accuracy                         0.6383        47
+   macro avg     0.5750    0.5779    0.5761        47
+weighted avg     0.6457    0.6383    0.6418        47
+
+
+Predictions:
+[0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+
+True Labels:
+[0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+
