@@ -1,0 +1,31 @@
+{
+  "mood": [
+    "Could you share a bit more about how your mood has been affected?",
+    "What kinds of things have been influencing your mood recently?"
+  ],
+
+  "sleep": [
+    "Could you tell me a little more about your recent sleep?",
+    "Have you noticed anything that has been affecting your sleep?"
+  ],
+
+  "energy": [
+    "Could you tell me more about your energy during the day?",
+    "What has your energy felt like lately?"
+  ],
+
+  "interest": [
+    "Could you share a bit more about your interest in activities?",
+    "What have you been feeling about the things you usually enjoy?"
+  ],
+
+  "daily_functioning": [
+    "Could you tell me more about how your daily tasks have been going?",
+    "What has been affecting your day-to-day routine lately?"
+  ],
+
+  "movement": [
+    "Could you tell me a little more about how your body has been feeling?",
+    "Have you noticed anything else about feeling restless or slowed down?"
+  ]
+}

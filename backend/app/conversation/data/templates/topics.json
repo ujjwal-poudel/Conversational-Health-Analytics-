@@ -1,0 +1,55 @@
+{
+  "mood": {
+    "primary": [
+      "How have you been feeling lately?"
+    ],
+    "secondary": [
+      "What kind of moments have been affecting your mood recently?"
+    ]
+  },
+
+  "sleep": {
+    "primary": [
+      "How has your sleep been these days?"
+    ],
+    "secondary": [
+      "Have you noticed anything different about your sleep pattern?"
+    ]
+  },
+
+  "energy": {
+    "primary": [
+      "How have your energy levels been lately?"
+    ],
+    "secondary": [
+      "Do you find yourself feeling more tired or more energized than usual?"
+    ]
+  },
+
+  "interest": {
+    "primary": [
+      "How interested have you been in the things you usually enjoy?"
+    ],
+    "secondary": [
+      "Have you noticed any change in what you feel like doing lately?"
+    ]
+  },
+
+  "daily_functioning": {
+    "primary": [
+      "How have your daily routines been going?"
+    ],
+    "secondary": [
+      "Has anything been making your day-to-day tasks easier or harder?"
+    ]
+  },
+
+  "movement": {
+    "primary": [
+      "Have you felt more restless or slowed down recently?"
+    ],
+    "secondary": [
+      "Have you noticed any changes in how fast or slow you're moving?"
+    ]
+  }
+}

@@ -1,11 +1,9 @@
 # Ignore data folders
-data/
 Dataset/
 Docs/
 
 # model
 models/
-data/
 
 # Ignore notebook checkpoints
 **/.ipynb_checkpoints/
@@ -28,7 +26,7 @@ __pycache__/
 *.so
 
 # random
-data/
+original_data/
 models/
 *.jsonl
 
@@ -171,7 +169,6 @@ env.bak/
 venv.bak/
 .DS_Store
 .Trash-0
-data
 .newvenv
 
 # Spyder project settings
