@@ -1,0 +1,32 @@
+{
+    "greeting": [
+        "Greet the user warmly without asking for personal information.",
+        "Say hello in a friendly and welcoming way.",
+        "Start the conversation naturally with a simple greeting."
+    ],
+
+    "purpose": [
+        "Explain briefly that you are here to understand how they have been feeling recently.",
+        "Let the user know that talking can help you learn about their recent experiences.",
+        "Describe your role as someone who will ask a few questions to understand their well-being."
+    ],
+
+    "comfort": [
+        "Reassure the user that this is a safe and comfortable place to share how they have been doing.",
+        "Let them know it's okay to take their time and share only what they are comfortable with.",
+        "Tell the user there's no pressure and you appreciate whatever they choose to share."
+    ],
+
+    "disclosure": [
+        "Inform the user that their answers will be analyzed to help assess patterns related to depression.",
+        "Explain that their responses will be used to help determine whether they may be experiencing depressive symptoms.",
+        "Let the user know that answering thoughtfully and openly can help produce a more accurate, unbiased result.",
+        "Clarify that this is not a medical diagnosis, and they can skip anything they do not feel comfortable answering."
+    ],
+
+    "transition": [
+        "Transition from the intro into the first topic.",
+        "Invite the user to start by describing how they've been feeling recently.",
+        "Ask them to begin by sharing how things have been going for them lately."
+    ]
+}

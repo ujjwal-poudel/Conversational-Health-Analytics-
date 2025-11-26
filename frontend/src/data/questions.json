@@ -1,0 +1,92 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "mainQuestion": "Can you tell me about things you used to enjoy — hobbies, outings, or small pleasures — and whether you still find them enjoyable?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "1a", "text": "What specific hobbies or activities did you used to enjoy the most?", "answer": "" },
+        { "id": "1b", "text": "How has your interest in these activities changed over time?", "answer": "" },
+        { "id": "1c", "text": "What prevents you from enjoying these activities now, if anything?", "answer": "" },
+        { "id": "1d", "text": "How do you feel when you think about the activities you used to enjoy?", "answer": "" }
+      ]
+    },
+    {
+      "id": 2,
+      "mainQuestion": "When did you first notice a change in your mood or feelings?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "2a", "text": "Can you remember approximately when this change in your mood began?", "answer": "" },
+        { "id": "2b", "text": "Was there a specific event or situation that seemed to trigger this change?", "answer": "" },
+        { "id": "2c", "text": "How would you describe the nature of this mood change?", "answer": "" },
+        { "id": "2d", "text": "How has this mood change affected your ability to function in daily life?", "answer": "" }
+      ]
+    },
+    {
+      "id": 3,
+      "mainQuestion": "How has your sleep been lately?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "3a", "text": "How many hours of sleep do you typically get per night now?", "answer": "" },
+        { "id": "3b", "text": "What specific sleep problems are you experiencing, if any?", "answer": "" },
+        { "id": "3c", "text": "How does your sleep quality affect how you feel during the day?", "answer": "" },
+        { "id": "3d", "text": "What do you think might be causing your sleep difficulties?", "answer": "" }
+      ]
+    },
+    {
+      "id": 4,
+      "mainQuestion": "Have you noticed any changes in your appetite or weight?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "4a", "text": "How has your appetite changed compared to before?", "answer": "" },
+        { "id": "4b", "text": "Have you noticed any weight changes, and if so, how much?", "answer": "" },
+        { "id": "4c", "text": "How do these changes in appetite or weight make you feel?", "answer": "" },
+        { "id": "4d", "text": "Have you noticed any connection between your mood and your eating patterns?", "answer": "" }
+      ]
+    },
+    {
+      "id": 5,
+      "mainQuestion": "How would you describe your energy levels?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "5a", "text": "How do your current energy levels compare to how you used to feel?", "answer": "" },
+        { "id": "5b", "text": "What activities or tasks are most affected by your energy levels?", "answer": "" },
+        { "id": "5c", "text": "How does having low energy impact your daily life?", "answer": "" },
+        { "id": "5d", "text": "What do you do to try to boost your energy, if anything?", "answer": "" }
+      ]
+    },
+    {
+      "id": 6,
+      "mainQuestion": "How would you describe your ability to concentrate or make decisions?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "6a", "text": "How has your ability to focus or concentrate changed?", "answer": "" },
+        { "id": "6b", "text": "What challenges do you face when trying to make decisions now?", "answer": "" },
+        { "id": "6c", "text": "How do concentration or decision-making difficulties affect your work or daily tasks?", "answer": "" },
+        { "id": "6d", "text": "How do you feel when you notice these difficulties with concentration or decision-making?", "answer": "" }
+      ]
+    },
+    {
+      "id": 7,
+      "mainQuestion": "How do you feel about yourself and your future?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "7a", "text": "What are your current thoughts and feelings about yourself?", "answer": "" },
+        { "id": "7b", "text": "How do you view your future prospects and possibilities?", "answer": "" },
+        { "id": "7c", "text": "Do you feel optimistic or pessimistic about things improving?", "answer": "" },
+        { "id": "7d", "text": "What would need to change for you to feel more hopeful about the future?", "answer": "" }
+      ]
+    },
+    {
+      "id": 8,
+      "mainQuestion": "How would you describe your relationships with family and friends?",
+      "answer": "",
+      "subQuestions": [
+        { "id": "8a", "text": "How have your relationships with family and friends changed recently?", "answer": "" },
+        { "id": "8b", "text": "Do you find yourself wanting to spend less time with people?", "answer": "" },
+        { "id": "8c", "text": "How do you feel when you interact with family and friends now?", "answer": "" },
+        { "id": "8d", "text": "How do you think your mood or feelings have affected your relationships?", "answer": "" }
+      ]
+    }
+  ]
+}
