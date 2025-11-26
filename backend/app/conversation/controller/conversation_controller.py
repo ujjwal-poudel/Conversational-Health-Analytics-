@@ -83,11 +83,22 @@ class ConversationController:
         except Exception:
             return fallback_text
 
-    def _minimal_transition(self) -> str:
+    def _minimal_transition(self, next_topic: str) -> str:
         """
-        Returns a short, human-like transition line.
+        Returns a short, natural transition line using the LLM.
+        Falls back to a simple filler if LLM fails.
         """
-        return random.choice(self.transition_fillers)
+        template = random.choice(self.transition_fillers)
+        
+        # Use LLM to create a more natural transition
+        transition = self._safe_rewrite(
+            self.llm.rewrite_transition,
+            template,
+            next_topic,
+            fallback_text=template
+        )
+        
+        return transition
 
     def get_current_topic(self) -> Optional[str]:
         """
@@ -252,14 +263,15 @@ class ConversationController:
 
         # If the topic is complete (words >= 25 or followups >= max), transition
         if self.sufficiency_checker.is_topic_complete(topic):
-            transition_line = self._minimal_transition()
-            self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
-
             next_topic = self.move_to_next_topic()
             if next_topic is None:
                 end = self.template_manager.get_conversation_end()
+                transition_line = self._minimal_transition("conversation end")
+                self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
                 return f"{transition_line} {end}"
 
+            transition_line = self._minimal_transition(next_topic)
+            self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
             next_question = self._generate_primary_question(next_topic)
             return f"{transition_line} {next_question}"
 
@@ -278,13 +290,14 @@ class ConversationController:
 
         # Safety: if for some reason needs_followup is False but topic not complete,
         # force a transition so the conversation never gets stuck.
-        transition_line = self._minimal_transition()
-        self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
-
         next_topic = self.move_to_next_topic()
         if next_topic is None:
             end = self.template_manager.get_conversation_end()
+            transition_line = self._minimal_transition("conversation end")
+            self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
             return f"{transition_line} {end}"
 
+        transition_line = self._minimal_transition(next_topic)
+        self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
         next_question = self._generate_primary_question(next_topic)
         return f"{transition_line} {next_question}"
