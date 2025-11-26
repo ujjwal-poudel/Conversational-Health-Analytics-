@@ -1,55 +1,50 @@
 {
   "mood": {
     "primary": [
-      "How have you been feeling lately?"
+      "So, how have you been feeling lately?"
     ],
     "secondary": [
-      "What kind of moments have been affecting your mood recently?"
+      "What kinds of things have been influencing your mood these days?"
     ]
   },
-
   "sleep": {
     "primary": [
-      "How has your sleep been these days?"
+      "How’s your sleep been recently?"
     ],
     "secondary": [
-      "Have you noticed anything different about your sleep pattern?"
+      "Have you noticed anything changing with your sleep pattern?"
     ]
   },
-
   "energy": {
     "primary": [
-      "How have your energy levels been lately?"
+      "How are your energy levels these days?"
     ],
     "secondary": [
-      "Do you find yourself feeling more tired or more energized than usual?"
+      "Do you feel more tired or more energized than usual?"
     ]
   },
-
   "interest": {
     "primary": [
-      "How interested have you been in the things you usually enjoy?"
+      "How interested have you been in the things you normally enjoy?"
     ],
     "secondary": [
-      "Have you noticed any change in what you feel like doing lately?"
+      "Have you felt any shift in what you feel like doing lately?"
     ]
   },
-
   "daily_functioning": {
     "primary": [
       "How have your daily routines been going?"
     ],
     "secondary": [
-      "Has anything been making your day-to-day tasks easier or harder?"
+      "Has anything been making your everyday tasks easier or tougher recently?"
     ]
   },
-
   "movement": {
     "primary": [
-      "Have you felt more restless or slowed down recently?"
+      "Have you been feeling more restless or kind of slowed down lately?"
     ],
     "secondary": [
-      "Have you noticed any changes in how fast or slow you're moving?"
+      "Have you noticed any changes in how quickly or slowly you’ve been moving?"
     ]
   }
 }
