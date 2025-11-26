@@ -28,7 +28,7 @@ TEMPLATES_PATH = os.path.join(current_dir, "app/conversation/data")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. Initialize Chatbot Engine
-    print("Initializing Conversation Engine (Groq)...")
+    print("Initializing Conversation Engine (Gemini)...")
     try:
         conversation_engine = ConversationEngine(templates_base_path=TEMPLATES_PATH)
         app.state.conversation_engine = conversation_engine
