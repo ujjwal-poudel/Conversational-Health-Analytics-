@@ -37,18 +37,12 @@ class ConversationEngine:
     High-level wrapper around the entire conversation system.
     """
 
-    def __init__(self, templates_base_path: str, model_path: Optional[str] = None, model_instance=None):
+    def __init__(self, templates_base_path: str):
         """
         Initializes all components.
 
         templates_base_path:
             Folder containing the JSON template files.
-
-        model_path:
-            Full path to the GGUF model file (if loading locally).
-            
-        model_instance:
-            Pre-loaded GPT4All model instance (optional).
         """
 
         # Load all template resources
@@ -58,7 +52,7 @@ class ConversationEngine:
         topic_keywords = self.template_manager.topic_keywords
 
         # Initialize LLM + rewriter
-        self.llm_client = LLMClient(model=model_instance, model_path=model_path)      
+        self.llm_client = LLMClient()      
         self.llm_rewriter = LLMRewriter(self.llm_client)
 
         # Initialize vague + sufficiency systems with topic keywords

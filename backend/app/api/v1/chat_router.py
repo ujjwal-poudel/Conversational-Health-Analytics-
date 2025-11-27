@@ -17,9 +17,14 @@ async def chat_message(request: Request, chat_request: ChatRequest):
 
     user_message = chat_request.message
     
-    # Process message
+    # Process message - engine now returns list of message parts
     bot_response = engine.process(user_message)
-    print(f"[CHAT] Bot response: '{bot_response}'")
+    
+    # Ensure response is always a list
+    if isinstance(bot_response, str):
+        bot_response = [bot_response]
+    
+    print(f"[CHAT] Bot response parts: {bot_response}")
     
     is_finished = engine.is_finished()
     
@@ -78,7 +83,7 @@ async def chat_message(request: Request, chat_request: ChatRequest):
             print("[CHAT] WARNING: Depression model not loaded. Skipping scoring.")
     
     return ChatResponse(
-        response=bot_response,
+        response=bot_response,  # Now returns list of message parts
         is_finished=is_finished,
         depression_score=depression_score,
         semantic_risk_label=semantic_risk_label,
@@ -104,10 +109,15 @@ async def start_chat(request: Request):
     
     # Start the conversation
     first_message = new_engine.start()
-    print(f"[CHAT] First question: '{first_message}'")
+    
+    # Ensure response is always a list
+    if isinstance(first_message, str):
+        first_message = [first_message]
+    
+    print(f"[CHAT] First question parts: {first_message}")
     
     return ChatResponse(
-        response=first_message,
+        response=first_message,  # Now returns list
         is_finished=False,
         depression_score=None
     )

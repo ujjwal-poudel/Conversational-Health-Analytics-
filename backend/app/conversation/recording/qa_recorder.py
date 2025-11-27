@@ -68,6 +68,26 @@ class QARecorder:
         """
         return self.qa_sequence
 
+    def get_recent_pairs(self, n: int = 3) -> List[tuple]:
+        """
+        Returns the last N question-answer pairs from the qa_sequence.
+        
+        Args:
+            n: Number of recent pairs to return (default: 3)
+            
+        Returns:
+            List of tuples [(question, answer), ...] in chronological order.
+            If there are fewer than N pairs, returns all available pairs.
+        """
+        pairs = []
+        # qa_sequence is alternating: [q1, a1, q2, a2, ...]
+        for i in range(0, len(self.qa_sequence) - 1, 2):
+            if i + 1 < len(self.qa_sequence):
+                pairs.append((self.qa_sequence[i], self.qa_sequence[i + 1]))
+        
+        # Return the last n pairs
+        return pairs[-n:] if len(pairs) > n else pairs
+
     def get_full_transcript(self) -> List[Dict[str, str]]:
         """
         Returns the complete conversation transcript.
