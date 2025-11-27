@@ -56,12 +56,91 @@ class LLMRewriter:
 
         return text.strip()
 
-    def _query_llm(self, prompt: str) -> str:
+    def _format_conversation_history(self, history: list) -> str:
         """
-        Sends a prompt to the LLM and returns the cleaned result.
+        Formats conversation history (list of Q&A tuples) for LLM prompts.
+        
+        Args:
+            history: List of tuples [(question, answer), ...]
+            
+        Returns:
+            Formatted string representation of the conversation history.
         """
-        raw = self.llm.generate(prompt)
-        return self._clean_response(raw)
+        if not history:
+            return ""
+        
+        formatted = "\n".join([
+            f"Bot: {q}\nUser: {a}" 
+            for q, a in history
+        ])
+        return f"\nPrevious conversation:\n{formatted}\n"
+
+    def _split_response(self, text: str) -> list:
+        """
+        Splits a response into multiple natural parts if appropriate.
+        
+        The LLM can use markers like "|||" or return multi-line responses
+        to indicate natural split points. For fallback templates, also looks
+        for natural transition patterns like "Okay, let's shift [topic]"
+        followed by a question.
+        
+        Args:
+            text: The response text to potentially split
+            
+        Returns:
+            List of text parts (single item if no split needed)
+        """
+        if not text:
+            return [text]
+        
+        # Check for explicit split marker from LLM
+        if "|||" in text:
+            parts = [p.strip() for p in text.split("|||") if p.strip()]
+            return parts if len(parts) > 1 else [text]
+        
+        # For fallback templates, try to detect natural transition + question pattern
+        # Common patterns: "Okay. What...", "Alright, let's shift. How...", etc.
+        import re
+        
+        # Pattern: [transition phrase] [punctuation] [question]
+        # Look for transition words followed by a question
+        transition_patterns = [
+            r'((?:Okay|Alright|Sure|Okay then|Alright, let\'s shift)[.,\s]+)(.+)',
+            r'((?:Let\'s move on|Moving on)[.,\s]+)(.+)',
+        ]
+        
+        for pattern in transition_patterns:
+            match = re.match(pattern, text, re.IGNORECASE)
+            if match:
+                transition = match.group(1).strip()
+                question = match.group(2).strip()
+                # Only split if both parts are substantial
+                if len(transition) > 3 and len(question) > 5:
+                    return [transition, question]
+        
+        # No natural split found, return as single
+        return [text]
+
+    def _query_llm(self, prompt: str, system_instruction: str = None, fallback_text: str = "") -> str:
+        """
+        Helper to query the LLM and clean the response.
+        If LLM fails or is inactive, returns fallback_text.
+        """
+        is_active = getattr(self.llm, 'is_active', False)
+        status_icon = "LLM Working" if is_active else "LLM Not Working"
+        print(f"\n[{status_icon} LLM STATUS] Active: {is_active}")
+        print(f"[ORIGINAL/FALLBACK] {fallback_text}")
+        
+        raw = self.llm.get_response(prompt, system_instruction=system_instruction)
+        
+        # If LLM is inactive (returns None) or fails, use fallback
+        if raw is None:
+            print(f"[RESULT] Using Fallback (LLM returned None)")
+            return fallback_text
+            
+        cleaned = self._clean_response(raw)
+        print(f"[RESULT] LLM Generated: {cleaned}")
+        return cleaned
 
     def classify_intent(self, user_text: str) -> str:
         """
@@ -95,49 +174,75 @@ Return only the rewritten question.
 Topic: {topic}
 Original: "{template}"
 """
-        return self._query_llm(prompt)
+        return self._query_llm(prompt, fallback_text=template)
 
-    def rewrite_followup(self, template: str, topic: str) -> str:
+    def rewrite_followup(self, template: str, topic: str, conversation_history: list = None) -> str:
         """
         Rewrites a follow-up question in a gentle tone.
+        
+        Args:
+            template: The template follow-up question
+            topic: The current topic
+            conversation_history: Optional list of (question, answer) tuples for context
         """
+        history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
+        
         prompt = f"""
-Rewrite this follow-up question naturally.
+Rewrite this follow-up question naturally based on the conversation context.
 Do not add new ideas.
 Return only the rewritten follow-up.
-
+{history_text}
 Topic: {topic}
 Original: "{template}"
 """
-        return self._query_llm(prompt)
+        return self._query_llm(prompt, fallback_text=template)
 
-    def rewrite_filler(self, template: str) -> str:
+    def rewrite_filler(self, template: str, conversation_history: list = None) -> str:
         """
         Rewrites a filler or acknowledgment line.
+        
+        Args:
+            template: The template filler text
+            conversation_history: Optional list of (question, answer) tuples for context
         """
+        history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
+        
         prompt = f"""
-Rewrite this acknowledgment in a natural conversational tone.
+Rewrite this acknowledgment in a natural conversational tone based on context.
 Do not add new meaning.
 Return only the rewritten acknowledgment.
-
+{history_text}
 Original: "{template}"
 """
-        return self._query_llm(prompt)
+        return self._query_llm(prompt, fallback_text=template)
 
-    def rewrite_transition(self, template: str, next_topic: str) -> str:
+    def rewrite_transition(self, template: str, next_topic: str, conversation_history: list = None) -> str:
         """
-        Rewrites a transition line naturally.
+        Rewrites a transition line naturally, optionally splitting into multiple parts.
+        
+        Args:
+            template: The template transition text
+            next_topic: The upcoming topic
+            conversation_history: Optional list of (question, answer) tuples for context
+            
+        Returns:
+            Either a single string or can be processed for multi-part responses.
+            Use "|||" in the LLM response to split into multiple parts.
+            Example: "Okay, let's shift to the next topic|||How is your daily routine?"
         """
+        history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
+        
         prompt = f"""
-Rewrite this transition line naturally.
-Keep it short.
-Do not add new content.
-Return only the rewritten line.
-
+Rewrite this transition line naturally based on the conversation context.
+You can optionally split the response into two parts using "|||" as a separator for a more natural flow.
+Example: "Okay, let's move on|||What about your sleep schedule?"
+Keep it short and conversational.
+Do not add new content beyond natural transitions.
+{history_text}
 Next topic: {next_topic}
 Original: "{template}"
 """
-        return self._query_llm(prompt)
+        return self._query_llm(prompt, fallback_text=template)
 
     def rewrite_intro(self, template: str) -> str:
         """
@@ -149,15 +254,22 @@ Return only the rewritten line.
 
 Original: "{template}"
 """
-        return self._query_llm(prompt)
+        return self._query_llm(prompt, fallback_text=template)
 
-    def generate_semantic_followup(self, user_text: str, topic: str) -> str:
+    def generate_semantic_followup(self, user_text: str, topic: str, conversation_history: list = None) -> str:
         """
         Generates a short follow-up based strictly on what the user said.
         No assumptions, no advice, no clinical references.
+        
+        Args:
+            user_text: The user's most recent message
+            topic: The current topic
+            conversation_history: Optional list of (question, answer) tuples for context
         """
+        history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
+        
         prompt = f"""
-Generate one gentle follow-up question based strictly on the user's message.
+Generate one gentle follow-up question based strictly on the user's message and conversation context.
 
 Rules:
 Stay within the topic: {topic}
@@ -165,8 +277,8 @@ Do not add new details.
 Do not infer anything.
 Keep it short.
 Return only the follow-up question.
-
-User message:
+{history_text}
+User's latest message:
 "{user_text}"
 """
         return self._query_llm(prompt)
