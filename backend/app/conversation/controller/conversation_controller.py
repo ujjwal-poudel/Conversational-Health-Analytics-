@@ -58,7 +58,9 @@ class ConversationController:
         self.vague_detector = vague_detector
 
         self.topics: List[str] = self.template_manager.get_topic_list()
-        self.current_topic_index: int = -1
+        # Use a list of remaining topics to allow dynamic reordering
+        self.remaining_topics: List[str] = list(self.topics)
+        self.current_topic: Optional[str] = None
 
         self.current_topic_responses: List[str] = []
         self.max_followups: int = max_followups
@@ -83,18 +85,33 @@ class ConversationController:
         except Exception:
             return fallback_text
 
+    def _get_recent_conversation_history(self, n: int = 2) -> list:
+        """
+        Retrieves the last N question-answer pairs from the conversation.
+        
+        Args:
+            n: Number of recent pairs to retrieve (default: 2)
+            
+        Returns:
+            List of (question, answer) tuples
+        """
+        return self.qa_recorder.get_recent_pairs(n)
+
     def _minimal_transition(self, next_topic: str) -> str:
         """
         Returns a short, natural transition line using the LLM.
         Falls back to a simple filler if LLM fails.
+        Includes conversation history for context-aware transitions.
         """
         template = random.choice(self.transition_fillers)
+        history = self._get_recent_conversation_history()
         
-        # Use LLM to create a more natural transition
+        # Use LLM to create a more natural transition with context
         transition = self._safe_rewrite(
             self.llm.rewrite_transition,
             template,
             next_topic,
+            history,
             fallback_text=template
         )
         
@@ -104,30 +121,32 @@ class ConversationController:
         """
         Returns the current topic label, or None if all topics are finished.
         """
-        if 0 <= self.current_topic_index < len(self.topics):
-            return self.topics[self.current_topic_index]
-        return None
+        return self.current_topic
 
     def move_to_next_topic(self) -> Optional[str]:
         """
         Moves to the next topic.
 
-        Uses topic detection to optionally override the default ordering.
+        Uses topic detection to optionally reorder the remaining topics.
         Resets per-topic tracking in the sufficiency checker.
         """
+        # Check if user input triggers a jump to a remaining topic
         override_topic = self._detect_next_topic()
 
-        if override_topic:
-            self.current_topic_index = self.topics.index(override_topic)
-        else:
-            self.current_topic_index += 1
+        if override_topic and override_topic in self.remaining_topics:
+            # Move the detected topic to the front of the list
+            self.remaining_topics.remove(override_topic)
+            self.remaining_topics.insert(0, override_topic)
 
-        if self.current_topic_index >= len(self.topics):
+        if not self.remaining_topics:
+            self.current_topic = None
             return None
 
+        # Pop the next topic from the front of the list
+        next_topic = self.remaining_topics.pop(0)
+        self.current_topic = next_topic
+        
         self.current_topic_responses = []
-
-        next_topic = self.topics[self.current_topic_index]
         self.sufficiency_checker.reset_topic(next_topic)
 
         return next_topic
@@ -138,23 +157,18 @@ class ConversationController:
 
         Logic:
         - Concatenate all responses within the current topic.
-        - For each remaining topic, count occurrences of its keywords.
+        - For each REMAINING topic, count occurrences of its keywords.
         - Choose the topic with highest keyword count.
         - If tie, choose randomly among tied topics.
         - If all scores are zero, return None (use default order).
         """
-        current_topic = self.get_current_topic()
-        if current_topic is None:
+        if not self.remaining_topics:
             return None
 
         combined = " ".join(self.current_topic_responses).lower()
-        remaining_topics = self.topics[self.current_topic_index + 1:]
-
-        if not remaining_topics:
-            return None
-
+        
         scores: Dict[str, int] = {}
-        for topic in remaining_topics:
+        for topic in self.remaining_topics:
             keywords = self.template_manager.get_topic_keywords(topic)
             score = 0
             for kw in keywords:
@@ -205,13 +219,17 @@ class ConversationController:
         Returns either a semantic follow-up (if relevant) or a template-based
         follow-up question. Relevance is based on topic keywords and is used
         only to decide which style of follow-up to use, not to block flow.
+        Includes conversation history for context.
         """
+        history = self._get_recent_conversation_history()
+        
         if relevant:
             fallback = "Could you tell me a bit more?"
             followup = self._safe_rewrite(
                 self.llm.generate_semantic_followup,
                 user_text,
                 topic,
+                history,
                 fallback_text=fallback
             )
         else:
@@ -221,6 +239,7 @@ class ConversationController:
                 self.llm.rewrite_followup,
                 template,
                 topic,
+                history,
                 fallback_text=template
             )
 
@@ -267,13 +286,30 @@ class ConversationController:
             if next_topic is None:
                 end = self.template_manager.get_conversation_end()
                 transition_line = self._minimal_transition("conversation end")
-                self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
-                return f"{transition_line} {end}"
+                # Check if transition can be split into multiple parts
+                parts = self.llm._split_response(transition_line)
+                if len(parts) > 1:
+                    # Record each part separately and return as list
+                    for part in parts:
+                        self.qa_recorder.record_bot_message(part, include_in_inference=False)
+                    return parts + [end]  # Return array of message parts
+                else:
+                    self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+                    return [transition_line, end]  # Return as array
 
             transition_line = self._minimal_transition(next_topic)
-            self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+            # Check if transition can be split into multiple parts
+            parts = self.llm._split_response(transition_line)
             next_question = self._generate_primary_question(next_topic)
-            return f"{transition_line} {next_question}"
+            
+            if len(parts) > 1:
+                # Record each part separately and return as list
+                for part in parts:
+                    self.qa_recorder.record_bot_message(part, include_in_inference=False)
+                return parts + [next_question]  # Return array of message parts
+            else:
+                self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+                return [transition_line, next_question]  # Return as array
 
         followups_used = int(status.get("followups", 0))
         relevant = bool(status.get("relevant", False))
@@ -294,10 +330,23 @@ class ConversationController:
         if next_topic is None:
             end = self.template_manager.get_conversation_end()
             transition_line = self._minimal_transition("conversation end")
-            self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
-            return f"{transition_line} {end}"
+            parts = self.llm._split_response(transition_line)
+            if len(parts) > 1:
+                for part in parts:
+                    self.qa_recorder.record_bot_message(part, include_in_inference=False)
+                return parts + [end]  # Return array of message parts
+            else:
+                self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+                return [transition_line, end]  # Return as array
 
         transition_line = self._minimal_transition(next_topic)
-        self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+        parts = self.llm._split_response(transition_line)
         next_question = self._generate_primary_question(next_topic)
-        return f"{transition_line} {next_question}"
+        
+        if len(parts) > 1:
+            for part in parts:
+                self.qa_recorder.record_bot_message(part, include_in_inference=False)
+            return parts + [next_question]  # Return array of message parts
+        else:
+            self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+            return [transition_line, next_question]  # Return as array
