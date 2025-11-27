@@ -9,7 +9,7 @@ interface Message {
 }
 
 interface ChatResponse {
-    response: string;
+    response: string | string[];  // Support both single string and array
     is_finished: boolean;
     depression_score: number | null;
     semantic_risk_label: string | null;
@@ -29,6 +29,7 @@ const Chatbot = () => {
     const [isTyping, setIsTyping] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const scrollToBottom = () => {
@@ -38,6 +39,13 @@ const Chatbot = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Auto-focus input when typing completes
+    useEffect(() => {
+        if (!isTyping && !isLoading && !isFinished && isStarted) {
+            inputRef.current?.focus();
+        }
+    }, [isTyping, isLoading, isFinished, isStarted]);
 
     // Typing animation function
     const typeMessage = (text: string, callback?: () => void) => {
@@ -75,6 +83,28 @@ const Chatbot = () => {
         }, 20); // 20ms per character for smooth typing
     };
 
+    // Type multiple message parts sequentially with delays
+    const typeMultiPartMessage = (parts: string[], callback?: () => void) => {
+        let currentPartIndex = 0;
+
+        const typeNextPart = () => {
+            if (currentPartIndex < parts.length) {
+                typeMessage(parts[currentPartIndex], () => {
+                    currentPartIndex++;
+                    if (currentPartIndex < parts.length) {
+                        // Add delay between parts (600ms for natural pause)
+                        setTimeout(typeNextPart, 600);
+                    } else {
+                        // All parts typed, call final callback
+                        if (callback) callback();
+                    }
+                });
+            }
+        };
+
+        typeNextPart();
+    };
+
     const startChat = async () => {
         setIsLoading(true);
         // 1. Show Intro Message with typing effect
@@ -90,7 +120,10 @@ const Chatbot = () => {
                 const res = await axios.post<ChatResponse>(`${API_BASE_URL}/start`);
 
                 // 3. Append Backend Question with typing animation
-                typeMessage(res.data.response);
+                const responseParts = Array.isArray(res.data.response)
+                    ? res.data.response
+                    : [res.data.response];
+                typeMultiPartMessage(responseParts);
             } catch (error) {
                 console.error("Error starting chat:", error);
                 typeMessage("Sorry, I couldn't start the conversation. Please try again.");
@@ -113,8 +146,13 @@ const Chatbot = () => {
                 message: userMsg
             });
 
-            // Use typing animation for bot response
-            typeMessage(res.data.response, () => {
+            // Handle both single string and array responses
+            const responseParts = Array.isArray(res.data.response)
+                ? res.data.response
+                : [res.data.response];
+
+            // Use typing animation for bot response with multi-part support
+            typeMultiPartMessage(responseParts, () => {
                 if (res.data.is_finished) {
                     setIsFinished(true);
                     setDepressionScore(res.data.depression_score);
@@ -252,6 +290,7 @@ const Chatbot = () => {
 
             <div className="input-area">
                 <input
+                    ref={inputRef}
                     type="text"
                     className="chat-input"
                     placeholder="Type your answer..."
