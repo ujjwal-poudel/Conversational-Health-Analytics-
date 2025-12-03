@@ -202,13 +202,17 @@ class ConversationController:
     def _generate_secondary_question(self, topic: str) -> str:
         """
         Returns the rewritten secondary question for a topic.
+        Includes conversation history to avoid repeating the primary question.
         """
         template = self.template_manager.get_secondary_question(topic)
         fallback = template or "Can you tell me more about that?"
+        history = self._get_recent_conversation_history()
+        
         question = self._safe_rewrite(
-            self.llm.rewrite_question,
+            self.llm.rewrite_followup,  # Use rewrite_followup instead of rewrite_question
             template,
             topic,
+            history,
             fallback_text=fallback
         )
         self.qa_recorder.record_bot_message(question, include_in_inference=True)
@@ -300,15 +304,19 @@ class ConversationController:
             transition_line = self._minimal_transition(next_topic)
             # Check if transition can be split into multiple parts
             parts = self.llm._split_response(transition_line)
-            next_question = self._generate_primary_question(next_topic)
             
             if len(parts) > 1:
+                # Transition already includes the question (split by |||)
                 # Record each part separately and return as list
-                for part in parts:
+                for part in parts[:-1]:  # All parts except the last (question)
                     self.qa_recorder.record_bot_message(part, include_in_inference=False)
-                return parts + [next_question]  # Return array of message parts
+                # Last part is the question - record it as inference
+                self.qa_recorder.record_bot_message(parts[-1], include_in_inference=True)
+                return parts  # Return array of message parts (no duplicate question)
             else:
+                # Transition doesn't include question, so generate it separately
                 self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+                next_question = self._generate_primary_question(next_topic)
                 return [transition_line, next_question]  # Return as array
 
         followups_used = int(status.get("followups", 0))
@@ -341,12 +349,16 @@ class ConversationController:
 
         transition_line = self._minimal_transition(next_topic)
         parts = self.llm._split_response(transition_line)
-        next_question = self._generate_primary_question(next_topic)
         
         if len(parts) > 1:
-            for part in parts:
+            # Transition already includes the question (split by |||)
+            for part in parts[:-1]:  # All parts except the last (question)
                 self.qa_recorder.record_bot_message(part, include_in_inference=False)
-            return parts + [next_question]  # Return array of message parts
+            # Last part is the question - record it as inference
+            self.qa_recorder.record_bot_message(parts[-1], include_in_inference=True)
+            return parts  # Return array of message parts (no duplicate question)
         else:
+            # Transition doesn't include question, so generate it separately
             self.qa_recorder.record_bot_message(transition_line, include_in_inference=False)
+            next_question = self._generate_primary_question(next_topic)
             return [transition_line, next_question]  # Return as array
