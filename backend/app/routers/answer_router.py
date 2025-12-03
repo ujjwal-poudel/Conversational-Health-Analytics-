@@ -41,47 +41,37 @@ USER_DATA_FILE = os.path.join(USER_DATA_DIR, "user_data.jsonl")
 _model = None
 _tokenizer = None
 _device = None
-_id_counter = 0
 
 def get_next_id():
-    """Get the next available ID by reading the current state from JSONL file."""
-    global _id_counter
-    
-    # If counter is already set, just increment and return
-    if _id_counter > 0:
-        _id_counter += 1
-        return str(_id_counter - 1)
-    
-    # Otherwise, read the JSONL file to find the last used ID
+    """Get the next available ID by reading the JSONL file each time."""
     try:
-        if os.path.exists(USER_DATA_FILE):
-            last_id = -1
-            with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if line.strip():
+        if not os.path.exists(USER_DATA_FILE):
+            print(f"[ID] No existing file found. Starting from ID: 0")
+            return "0"
+        
+        # Read all existing IDs from the file
+        last_id = -1
+        with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    try:
                         data = json.loads(line)
                         if 'id' in data:
-                            try:
-                                current_id = int(data['id'])
-                                if current_id > last_id:
-                                    last_id = current_id
-                            except ValueError:
-                                continue
-            
-            # Set counter to continue from the next ID
-            _id_counter = last_id + 1
-            print(f"Resuming from ID: {_id_counter}")
-        else:
-            _id_counter = 0
-            
+                            current_id = int(data['id'])
+                            if current_id > last_id:
+                                last_id = current_id
+                    except (json.JSONDecodeError, ValueError) as e:
+                        print(f"[ID] Warning: Skipping malformed line: {e}")
+                        continue
+        
+        # Next ID is last_id + 1
+        next_id = last_id + 1
+        print(f"[ID] Last ID found: {last_id}, Next ID: {next_id}")
+        return str(next_id)
+        
     except Exception as e:
-        print(f"Error reading ID counter: {e}")
-        _id_counter = 0
-    
-    # Return the current ID and increment for next time
-    current_id = str(_id_counter)
-    _id_counter += 1
-    return current_id
+        print(f"[ID] Error reading file: {e}. Starting from ID: 0")
+        return "0"
 
 # Define the input models
 class SubQuestion(BaseModel):
