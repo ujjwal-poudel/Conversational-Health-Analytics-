@@ -148,16 +148,21 @@ class LLMRewriter:
         positive, negative, neutral, vague, off_topic, emotional
         """
         prompt = f"""
-Classify the user's message using only one label:
-positive, negative, neutral, vague, off_topic, emotional
+You are an intent classification system. Your job is to label the user's message with exactly one of the following categories.
 
-Rules:
-Return only the label.
-Do not explain.
-Do not add extra text.
+**Categories:**
+* **positive:** Expresses happiness, hope, progress, or agreement. (e.g., "I'm doing well", "That sounds good")
+* **negative:** Expresses sadness, frustration, anger, or disagreement. (e.g., "I feel terrible", "I hate this")
+* **neutral:** Factual statements or simple acknowledgments without strong emotion. (e.g., "I ate lunch", "Okay")
+* **vague:** The answer is too short or unclear to understand the meaning. (e.g., "Maybe", "I guess", "Sort of")
+* **off_topic:** The user is changing the subject or talking about something unrelated to the current conversation.
+* **emotional:** The user is expressing very strong feelings (good or bad) that require empathy. (e.g., "I'm devastated", "I'm so excited!")
 
-User message:
+**User message:**
 "{user_text}"
+
+**Task:**
+Output ONLY the single label from the list above. Do not provide explanations or punctuation.
 """
         return self._query_llm(prompt)
 
@@ -166,13 +171,17 @@ User message:
         Rewrites a topic question in a natural tone without changing meaning.
         """
         prompt = f"""
-Rewrite this question in a simple and natural conversational tone.
-Keep the meaning exactly the same.
-Do not add anything new.
-Return only the rewritten question.
+You are Ellie, a warm and friendly person having a casual chat. Rewrite the question below to sound like something a real person would actually say in conversation.
 
-Topic: {topic}
-Original: "{template}"
+**Instructions:**
+* **Tone:** Conversational, soft, and spoken (not written) style.
+* **Goal:** Ask the same thing but make it sound less like a survey and more like a chat.
+* **Constraint:** Keep the exact meaning. Do not add new questions.
+
+**Topic:** {topic}
+**Original Script:** "{template}"
+
+**Output:** Return ONLY the rewritten question.
 """
         return self._query_llm(prompt, fallback_text=template)
 
@@ -188,12 +197,20 @@ Original: "{template}"
         history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
         
         prompt = f"""
-Rewrite this follow-up question naturally based on the conversation context.
-Do not add new ideas.
-Return only the rewritten follow-up.
+You are Ellie. You are deep in conversation. Rewrite the follow-up question below so it feels like a natural reaction to what was just said.
+
+**Conversation So Far:**
 {history_text}
-Topic: {topic}
-Original: "{template}"
+
+**Task:**
+Rewrite the "Original Question" to fit this specific moment.
+* Make it flow smoothly from the user's last sentence.
+* It should sound curious and gentle, not robotic.
+
+**Topic:** {topic}
+**Original Question:** "{template}"
+
+**Output:** Return ONLY the rewritten question.
 """
         return self._query_llm(prompt, fallback_text=template)
 
@@ -208,11 +225,19 @@ Original: "{template}"
         history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
         
         prompt = f"""
-Rewrite this acknowledgment in a natural conversational tone based on context.
-Do not add new meaning.
-Return only the rewritten acknowledgment.
+You are an active listener named Ellie. Rewrite the acknowledgment below to sound genuine and natural.
+
+**Context:**
 {history_text}
-Original: "{template}"
+
+**Original Phrase:** "{template}"
+
+**Task:**
+* React naturally to the emotion in the user's last message.
+* Avoid robotic repetition. Use phrases like "I hear you," "That makes sense," or "Oh, wow" if appropriate.
+* Keep it extremely short (2-5 words).
+
+**Output:** Return ONLY the rewritten phrase.
 """
         return self._query_llm(prompt, fallback_text=template)
 
@@ -233,14 +258,24 @@ Original: "{template}"
         history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
         
         prompt = f"""
-Rewrite this transition line naturally based on the conversation context.
-You can optionally split the response into two parts using "|||" as a separator for a more natural flow.
-Example: "Okay, let's move on|||What about your sleep schedule?"
-Keep it short and conversational.
-Do not add new content beyond natural transitions.
+You are Ellie. You need to gently steer the conversation to a new topic without it feeling awkward or abrupt.
+
+**Context:**
 {history_text}
-Next topic: {next_topic}
-Original: "{template}"
+
+**Task:**
+Rewrite the transition to:
+1.  Softly close the current topic (e.g., "Thanks for sharing that").
+2.  Bridge to the new topic: **{next_topic}**.
+3.  Ask the question from the original text.
+
+**Formatting:**
+Use "|||" to split the acknowledgment from the question if it feels more natural to pause.
+* *Example:* "I appreciate you telling me that.|||How have you been sleeping lately?"
+
+**Original Script:** "{template}"
+
+**Output:** Return ONLY the rewritten text (with optional |||).
 """
         return self._query_llm(prompt, fallback_text=template)
 
@@ -269,16 +304,18 @@ Original: "{template}"
         history_text = self._format_conversation_history(conversation_history) if conversation_history else ""
         
         prompt = f"""
-Generate one gentle follow-up question based strictly on the user's message and conversation context.
+You are Ellie, a curious and empathetic listener. The user just said something interesting, and you want to know a little more.
 
-Rules:
-Stay within the topic: {topic}
-Do not add new details.
-Do not infer anything.
-Keep it short.
-Return only the follow-up question.
+**Context:**
 {history_text}
-User's latest message:
-"{user_text}"
+**User said:** "{user_text}"
+**Current Topic:** {topic}
+
+**Task:**
+Ask a very short, simple follow-up question based *only* on what they just said.
+* **Tone:** Casual, like a friend asking "Really?" or "How so?"
+* **Rules:** No advice. No therapy speak. No big assumptions. Just simple curiosity.
+
+**Output:** Return ONLY the short follow-up question.
 """
         return self._query_llm(prompt)
