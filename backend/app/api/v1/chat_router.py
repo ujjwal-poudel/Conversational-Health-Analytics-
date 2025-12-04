@@ -121,3 +121,14 @@ async def start_chat(request: Request):
         is_finished=False,
         depression_score=None
     )
+
+
+@router.post("/cleanup")
+async def cleanup_chat(request: Request):
+    """
+    Clean up/reset the text conversation session.
+    """
+    print("\n[CHAT] Cleanup requested. Resetting conversation engine.")
+    # Reset the global engine to clear in-memory state
+    request.app.state.conversation_engine = None
+    return {"status": "success"}
