@@ -47,6 +47,19 @@ const Chatbot = () => {
         }
     }, [isTyping, isLoading, isFinished, isStarted]);
 
+    // Cleanup on page refresh/close if conversation is active but not finished
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (isStarted && !isFinished) {
+                // sendBeacon is more reliable than fetch during page unload
+                navigator.sendBeacon('http://localhost:8000/api/v1/chat/cleanup');
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isStarted, isFinished]);
+
     // Typing animation function
     const typeMessage = (text: string, callback?: () => void) => {
         setIsTyping(true);

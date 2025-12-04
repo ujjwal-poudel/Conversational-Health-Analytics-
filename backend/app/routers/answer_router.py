@@ -29,8 +29,8 @@ print("Real depression scoring model loaded successfully")
 
 router = APIRouter()
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = "audio_data/uploads"
+# os.makedirs(UPLOAD_DIR, exist_ok=True)  # Deprecated: Endpoint unused
 
 # User data logging
 USER_DATA_DIR = "user_data"

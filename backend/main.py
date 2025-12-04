@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import sys
 import os
@@ -18,7 +19,7 @@ from src.semantic_inference import get_semantic_classifier
 from app.database import engine
 from app import models
 from app.routers import auth_router, question_router, answer_router, admin_router
-from app.api.v1 import chat_router
+from app.api.v1 import chat_router, audio_chat_router
 from app.conversation.engine import ConversationEngine
 
 # --- Configuration ---
@@ -88,6 +89,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Mount audio directory for static access
+os.makedirs("audio_data", exist_ok=True)
+app.mount("/audio", StaticFiles(directory="audio_data"), name="audio")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Change this in production
@@ -101,6 +106,7 @@ app.include_router(question_router.router, tags=["questions"])
 app.include_router(answer_router.router, tags=["answers"])
 app.include_router(admin_router.router, prefix="/admin", tags=["admin"])
 app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["chat"])
+app.include_router(audio_chat_router.router, prefix="/api/v1", tags=["audio"])
 
 @app.get("/")
 def read_root():

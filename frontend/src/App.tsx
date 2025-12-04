@@ -1,19 +1,11 @@
 import { useState } from 'react'
 import Layout from './components/Layout'
-import Questionnaire from './components/Questionnaire'
 import Chatbot from './components/Chatbot'
-import Results from './components/Results'
+import AudioChat from './components/AudioChat'
 import './App.css'
 
 function App() {
-  const [view, setView] = useState<'questionnaire' | 'chatbot'>('chatbot')
-  const [showResults, setShowResults] = useState(false)
-  const [depressionScore, setDepressionScore] = useState(0)
-
-  const handleQuestionnaireComplete = (score: number) => {
-    setDepressionScore(score)
-    setShowResults(true)
-  }
+  const [view, setView] = useState<'chatbot' | 'audiochat'>('chatbot')
 
   return (
     <Layout>
@@ -29,32 +21,24 @@ function App() {
             cursor: 'pointer'
           }}
         >
-          AI Chatbot
+          💬 Text Chat
         </button>
         <button
-          onClick={() => setView('questionnaire')}
+          onClick={() => setView('audiochat')}
           style={{
             padding: '8px 16px',
-            background: view === 'questionnaire' ? '#764ba2' : 'rgba(255,255,255,0.1)',
+            background: view === 'audiochat' ? '#764ba2' : 'rgba(255,255,255,0.1)',
             border: 'none',
             borderRadius: '20px',
             color: 'white',
             cursor: 'pointer'
           }}
         >
-          Questionnaire
+          🎤 Voice Chat
         </button>
       </div>
 
-      {view === 'chatbot' ? (
-        <Chatbot />
-      ) : (
-        showResults ? (
-          <Results score={depressionScore} />
-        ) : (
-          <Questionnaire onComplete={handleQuestionnaireComplete} />
-        )
-      )}
+      {view === 'chatbot' ? <Chatbot /> : <AudioChat />}
     </Layout>
   )
 }
