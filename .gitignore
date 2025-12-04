@@ -29,6 +29,10 @@ __pycache__/
 original_data/
 models/
 *.jsonl
+bin/
+piper_models/
+piper_phonemize/
+audio_data/
 
 # Distribution / packaging
 .Python
