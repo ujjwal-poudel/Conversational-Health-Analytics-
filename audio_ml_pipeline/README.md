@@ -197,20 +197,44 @@ Generate all experiment graphs:
 # Audio model experiments (V1-V8)
 python -m src.evaluation.generate_experiment_plots
 
-# Text model test results
-python -m src.evaluation.generate_text_model_plots
+## Multimodal Fusion Results
 
-# RoBERTa test set evaluation
-python -m src.evaluation.generate_roberta_plots
+We evaluated late fusion strategies combining our **Audio Model (Lasso K=55)** and **Text Model (Multi-target Epoch 14)**.
 
-# RoBERTa training/validation curves
-python -m src.evaluation.generate_roberta_training_curves
+| Strategy | MAE | Improvement | Status |
+|----------|-----|-------------|--------|
+| Audio Only | 4.71 | -0.0% | Baseline |
+| Text Only | 4.73 | -0.0% | Baseline |
+| **Min Fusion** | **4.26** | **+9.6%** | **🏆 Best** |
+| Simple Average | 4.34 | +7.9% | Effective |
+| Max Fusion | 5.18 | -9.9% | Worse |
 
-# Final comparison
+**Key Findings:**
+1. **Fusion Works:** Combining modalities reduced error by **9.6%** compared to the best single modality.
+2. **Min Fusion is Optimal:** Taking the minimum predicted depression score from audio vs. text worked best, suggesting models tend to overestimate severity when uncertain.
+3. **Competitive Performance:** Our fused MAE of **4.26** is approaching SOTA text performance (3.78).
+
+### Visualizations
+
+The pipeline generates professional comparative visualizations using a consistent Figma-style dark theme.
+
+![Complete Comparison](reports/final_comparison/complete_comparison.png)
+*Figure 1: Comparison of our audio/text models against Phase 1 baselines and SOTA literature.*
+
+![Fusion Comparison](reports/fusion_results/fusion_comparison.png)
+*Figure 2: Performance improvement achieved through multimodal fusion.*
+
+### Generating Graphs
+```bash
+# Phase 1 vs Phase 2 comparison
+python -m src.evaluation.generate_phase1_baselines
+
+# Final model comparison (Audio, Text, SOTA)
 python -m src.evaluation.generate_final_comparison
-```
 
-All graphs saved to `reports/` with consistent Figma color scheme.
+# Fusion results graph
+python -m src.evaluation.generate_fusion_graph
+```
 
 ## Troubleshooting
 
