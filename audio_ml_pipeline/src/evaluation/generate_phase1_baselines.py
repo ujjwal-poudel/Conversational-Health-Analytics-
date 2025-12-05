@@ -79,14 +79,14 @@ MODELS = [
 
 # Current best model for comparison
 MULTI_TARGET = {
-    'name': 'Multi-target\nRoBERTa',
+    'name': 'Multi-target\nModel',
     'full_name': 'distilroberta-base',
     'type': 'Multi-label Regression',
     'task': '8-head hierarchical regression',
     'epochs': 40,
-    'best_epoch': 15,
-    'test_mae': 4.23,
-    'test_rmse': 5.52,
+    'best_epoch': 14,
+    'test_mae': 4.73,
+    'test_rmse': 6.06,
     'note': 'Final approach - Phase 2',
     'color': COLORS['multi_target']
 }
