@@ -1,0 +1,44 @@
+======================================================================
+MULTIMODAL FUSION RESULTS
+======================================================================
+
+SINGLE MODALITIES (BASELINE)
+----------------------------------------
+  Audio (Lasso K=55):           MAE = 4.7137
+  Text (Multi-target Model):    MAE = 4.7281
+  Best Single Modality:         MAE = 4.7137
+
+FUSION STRATEGIES COMPARISON
+----------------------------------------------------------------------
+Strategy                       MAE        RMSE       Improvement    
+----------------------------------------------------------------------
+Simple Average (50/50)         4.3434     5.3604      +7.86% BETTER
+Weighted (50/50)               4.3434     5.3604      +7.86% BETTER
+Weighted (40/60)               4.3819     5.4139      +7.04% BETTER
+Weighted (30/70)               4.4368     5.5131      +5.88% BETTER
+Weighted (19/80)               4.5189     5.6555      +4.13% BETTER
+Min Fusion                     4.2637     5.7264      +9.55% BETTER
+Max Fusion                     5.1782     6.1113      -9.85% WORSE
+----------------------------------------------------------------------
+
+======================================================================
+BEST FUSION STRATEGY
+======================================================================
+  Strategy:                     Min Fusion
+  MAE:                          4.2637
+  RMSE:                         5.7264
+  Improvement over best single: 9.55%
+
+COMPARISON TO SOTA
+----------------------------------------
+  SOTA Text (Literature):       MAE = 3.78
+  Our Best Fusion:              MAE = 4.2637
+  Gap from SOTA:                12.80%
+
+======================================================================
+RECOMMENDATION
+======================================================================
+  - Multimodal fusion recommended!
+  - Min Fusion achieves 9.5% improvement
+  - Both audio and text contribute complementary information
+======================================================================
