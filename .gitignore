@@ -1,9 +1,13 @@
 # Ignore data folders
 Dataset/
 Docs/
+datasets/
 
-# model
-models/
+# model artifacts (saved .joblib, .pkl, .h5 files)
+*.joblib
+*.pkl
+*.h5
+audio_ml_pipeline/models/
 
 # Ignore notebook checkpoints
 **/.ipynb_checkpoints/
@@ -27,7 +31,7 @@ __pycache__/
 
 # random
 original_data/
-models/
+*.jsonl
 *.jsonl
 bin/
 piper_models/
