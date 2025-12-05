@@ -1,0 +1,11 @@
+Model: XGBoost
+
+Cross-Validation (train+dev):
+  Mean RMSE: 5.8254
+  Std RMSE:  0.5256
+  Fold RMSEs: [5.681295959596756, 5.9403716444175325, 6.720635832230164, 5.684422474497451, 5.100316658752584]
+
+Test Set Performance:
+  RMSE: 6.4548
+  MAE:  5.3991
+  R²:   -0.0162
