@@ -1,0 +1,11 @@
+Model: LightGBM
+
+Cross-Validation (train+dev):
+  Mean RMSE: 5.6841
+  Std RMSE:  0.4781
+  Fold RMSEs: [5.8222917426287575, 5.894710122437486, 6.327970366286069, 5.481254257817549, 4.894334999861379]
+
+Test Set Performance:
+  RMSE: 6.4488
+  MAE:  5.4326
+  R²:   -0.0143
