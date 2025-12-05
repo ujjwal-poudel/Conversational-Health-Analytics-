@@ -31,6 +31,10 @@ FEATURE_RMS_DIR = os.path.join(FEATURE_DIR, "rms")
 FEATURE_ZCR_DIR = os.path.join(FEATURE_DIR, "zcr")
 FEATURE_COMBINED_DIR = os.path.join(FEATURE_DIR, "combined")
 
+FEATURE_WAV2VEC2_DIR = os.path.join(FEATURE_DIR, "wav2vec2")
+FEATURE_OPENL3_DIR = os.path.join(FEATURE_DIR, "openl3")
+FEATURE_PROSODY_DIR = os.path.join(FEATURE_DIR, "prosody")
+
 # Create directories if missing
 for d in [
     PROCESSED_AUDIO_DIR,
@@ -44,6 +48,9 @@ for d in [
     FEATURE_RMS_DIR,
     FEATURE_ZCR_DIR,
     FEATURE_COMBINED_DIR,
+    FEATURE_WAV2VEC2_DIR,
+    FEATURE_OPENL3_DIR,
+    FEATURE_PROSODY_DIR,
 ]:
     os.makedirs(d, exist_ok=True)
 
