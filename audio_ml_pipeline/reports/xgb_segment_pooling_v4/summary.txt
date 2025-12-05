@@ -1,0 +1,63 @@
+============================================================
+EXPERIMENT: V4 - Segment Pooling (Best Model)
+============================================================
+
+Model: XGBoost
+
+--- Feature Engineering Pipeline ---
+
+  Step 1: Audio Preprocessing
+          -> Extract participant-only audio from DAIC-WOZ recordings
+          -> Apply 300 Hz high-pass filter
+          -> Output: Cleaned participant audio (.wav)
+
+  Step 2: Wav2Vec2 Embedding Extraction
+          -> Model: superb/wav2vec2-base-superb-er (emotion-tuned)
+          -> Input: Participant audio (16kHz)
+          -> Output: 768-dimensional embeddings per frame
+          -> Chunked inference (20s chunks) with frame subsampling
+
+  Step 3: Prosody Feature Extraction
+          -> Pitch (F0) via YIN algorithm (50-400 Hz)
+          -> Energy (RMS)
+          -> Zero-crossing rate (ZCR)
+          -> Spectral centroid, bandwidth, rolloff
+          -> Spectral contrast (7 bands)
+          -> Output: 13-dimensional features per frame
+
+  Step 4: Segment Pooling (Temporal Dynamics)
+          -> Split embeddings into 3 segments: Beginning / Middle / End
+          -> For each segment, compute 4 statistics:
+             - Mean, Std, Min, Max
+          -> Wav2Vec2: 768 dims × 4 stats × 3 segments = 9,216 features
+          -> Prosody:  13 dims × 4 stats × 3 segments = 156 features
+
+  Step 5: Feature Concatenation
+          -> 9,216 + 156 = 9,372 total features per participant
+
+  Step 6: Model Training
+          -> XGBoost with Optuna hyperparameter tuning
+          -> 5-fold cross-validation on train+dev
+          -> Final model trained on full train+dev set
+
+--- Dataset Info ---
+  Train samples: 107
+  Dev samples: 35
+  Test samples: 47
+  Total features: 9,372
+
+--- Cross-Validation (train+dev) ---
+  Mean RMSE: 5.3846
+  Std RMSE:  0.2353
+  Fold RMSEs: [5.1650, 5.4247, 5.7848, 5.1285, 5.4200]
+
+--- Test Set Performance ---
+  RMSE: 5.9402
+  MAE:  4.9265
+  R²:   0.1394
+
+--- Interpretation ---
+  - Best performing model across all experiments
+  - Only model with MAE < 5.0
+  - Positive R² indicates model is learning meaningful patterns
+  - Segment pooling captures temporal dynamics in conversation

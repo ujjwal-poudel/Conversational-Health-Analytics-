@@ -1,0 +1,44 @@
+============================================================
+EXPERIMENT: V6: PCA (768→100) + Segment Pooling (3 segments)
+============================================================
+
+Model: LightGBM
+
+--- Feature Engineering Pipeline ---
+
+  Step 1: Wav2Vec2 embeddings (768 dims per frame)
+          -> Model: superb/wav2vec2-base-superb-er (emotion-tuned)
+          -> PCA reduction (768 → 100 dims)
+          -> Segment pooling (3 segments: Begin/Mid/End)
+          -> 4 stats per segment (mean, std, min, max)
+          -> 100 × 4 × 3 = 1,200 features
+
+  Step 2: Prosody features (13 dims per frame)
+          -> F0, RMS, ZCR, spectral centroid/bandwidth/rolloff, contrast
+          -> Segment pooling (3 segments: Begin/Mid/End)
+          -> 4 stats per segment (mean, std, min, max)
+          -> 13 × 4 × 3 = 156 features
+
+  Step 3: Concatenate
+          -> 1,200 + 156 = 1,356 total features
+
+
+--- Dataset Info ---
+  Train+Dev samples: 142
+  Test samples: 47
+  Total features: 2556
+  Feature/Sample ratio: 18.00
+
+--- Cross-Validation (train+dev) ---
+  Mean RMSE: 5.4823
+  Std RMSE:  0.2900
+  Fold RMSEs: [5.6355, 5.3423, 5.9704, 5.1495, 5.3138]
+
+--- Test Set Performance ---
+  RMSE: 6.2417
+  MAE:  5.3164
+  R²:   0.0498
+
+--- Interpretation ---
+  Model slightly better than predicting mean.
+============================================================

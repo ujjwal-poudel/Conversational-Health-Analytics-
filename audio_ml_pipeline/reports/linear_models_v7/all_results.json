@@ -1,0 +1,194 @@
+{
+    "all_results": [
+        {
+            "model": "Ridge",
+            "rmse": 6.374,
+            "mae": 5.2246,
+            "r2": 0.0091,
+            "cv_rmse": 5.6187,
+            "best_alpha": 1000.0,
+            "config": "No FS"
+        },
+        {
+            "model": "Lasso",
+            "rmse": 6.2641,
+            "mae": 5.217,
+            "r2": 0.043,
+            "cv_rmse": 5.7056,
+            "best_alpha": 1.5264,
+            "nonzero_coefs": 4,
+            "config": "No FS"
+        },
+        {
+            "model": "ElasticNet",
+            "rmse": 6.202,
+            "mae": 5.0496,
+            "r2": 0.0618,
+            "cv_rmse": 5.6712,
+            "best_alpha": 7.279,
+            "best_l1_ratio": 0.1,
+            "nonzero_coefs": 156,
+            "config": "No FS"
+        },
+        {
+            "model": "Ridge",
+            "rmse": 6.142,
+            "mae": 4.8642,
+            "r2": 0.0799,
+            "cv_rmse": 5.2707,
+            "best_alpha": 323.7458,
+            "config": "K=100"
+        },
+        {
+            "model": "Lasso",
+            "rmse": 5.9057,
+            "mae": 4.7702,
+            "r2": 0.1493,
+            "cv_rmse": 5.3054,
+            "best_alpha": 0.4942,
+            "nonzero_coefs": 14,
+            "config": "K=100"
+        },
+        {
+            "model": "ElasticNet",
+            "rmse": 6.1613,
+            "mae": 4.8811,
+            "r2": 0.0741,
+            "cv_rmse": 5.1791,
+            "best_alpha": 2.0434,
+            "best_l1_ratio": 0.1,
+            "nonzero_coefs": 45,
+            "config": "K=100"
+        },
+        {
+            "model": "Ridge",
+            "rmse": 6.228,
+            "mae": 4.9848,
+            "r2": 0.0539,
+            "cv_rmse": 5.1604,
+            "best_alpha": 323.7458,
+            "config": "K=200"
+        },
+        {
+            "model": "Lasso",
+            "rmse": 6.2189,
+            "mae": 4.9101,
+            "r2": 0.0567,
+            "cv_rmse": 5.3191,
+            "best_alpha": 0.3393,
+            "nonzero_coefs": 27,
+            "config": "K=200"
+        },
+        {
+            "model": "ElasticNet",
+            "rmse": 6.2295,
+            "mae": 4.9619,
+            "r2": 0.0535,
+            "cv_rmse": 5.1381,
+            "best_alpha": 2.0434,
+            "best_l1_ratio": 0.1,
+            "nonzero_coefs": 81,
+            "config": "K=200"
+        },
+        {
+            "model": "Ridge",
+            "rmse": 6.1877,
+            "mae": 4.972,
+            "r2": 0.0661,
+            "cv_rmse": 5.2115,
+            "best_alpha": 754.312,
+            "config": "K=300"
+        },
+        {
+            "model": "Lasso",
+            "rmse": 6.1091,
+            "mae": 4.8317,
+            "r2": 0.0897,
+            "cv_rmse": 5.4053,
+            "best_alpha": 0.4095,
+            "nonzero_coefs": 27,
+            "config": "K=300"
+        },
+        {
+            "model": "ElasticNet",
+            "rmse": 6.2193,
+            "mae": 4.9613,
+            "r2": 0.0566,
+            "cv_rmse": 5.1866,
+            "best_alpha": 2.8072,
+            "best_l1_ratio": 0.1,
+            "nonzero_coefs": 97,
+            "config": "K=300"
+        },
+        {
+            "model": "Ridge",
+            "rmse": 6.1081,
+            "mae": 4.9926,
+            "r2": 0.09,
+            "cv_rmse": 5.2271,
+            "best_alpha": 1000.0,
+            "config": "K=500"
+        },
+        {
+            "model": "Lasso",
+            "rmse": 6.0416,
+            "mae": 4.8471,
+            "r2": 0.1097,
+            "cv_rmse": 5.4852,
+            "best_alpha": 0.4942,
+            "nonzero_coefs": 31,
+            "config": "K=500"
+        },
+        {
+            "model": "ElasticNet",
+            "rmse": 6.175,
+            "mae": 4.9692,
+            "r2": 0.07,
+            "cv_rmse": 5.1852,
+            "best_alpha": 2.8072,
+            "best_l1_ratio": 0.1,
+            "nonzero_coefs": 136,
+            "config": "K=500"
+        },
+        {
+            "model": "Ridge",
+            "rmse": 6.2532,
+            "mae": 5.1639,
+            "r2": 0.0463,
+            "cv_rmse": 5.2748,
+            "best_alpha": 1000.0,
+            "config": "K=1000"
+        },
+        {
+            "model": "Lasso",
+            "rmse": 6.2641,
+            "mae": 5.217,
+            "r2": 0.043,
+            "cv_rmse": 5.6918,
+            "best_alpha": 1.5264,
+            "nonzero_coefs": 4,
+            "config": "K=1000"
+        },
+        {
+            "model": "ElasticNet",
+            "rmse": 6.3506,
+            "mae": 5.1682,
+            "r2": 0.0163,
+            "cv_rmse": 5.3453,
+            "best_alpha": 2.0434,
+            "best_l1_ratio": 0.1,
+            "nonzero_coefs": 267,
+            "config": "K=1000"
+        }
+    ],
+    "best": {
+        "model": "Lasso",
+        "rmse": 5.9057,
+        "mae": 4.7702,
+        "r2": 0.1493,
+        "cv_rmse": 5.3054,
+        "best_alpha": 0.4942,
+        "nonzero_coefs": 14,
+        "config": "K=100"
+    }
+}

@@ -1,0 +1,36 @@
+============================================================
+EXPERIMENT: V7 - Linear Models (Multiple Configurations)
+============================================================
+
+
+--- No FS ---
+Ridge: MAE=5.2246, RMSE=6.374, R²=0.0091
+Lasso: MAE=5.217, RMSE=6.2641, R²=0.043
+ElasticNet: MAE=5.0496, RMSE=6.202, R²=0.0618
+
+--- K=100 ---
+Ridge: MAE=4.8642, RMSE=6.142, R²=0.0799
+Lasso: MAE=4.7702, RMSE=5.9057, R²=0.1493
+ElasticNet: MAE=4.8811, RMSE=6.1613, R²=0.0741
+
+--- K=200 ---
+Ridge: MAE=4.9848, RMSE=6.228, R²=0.0539
+Lasso: MAE=4.9101, RMSE=6.2189, R²=0.0567
+ElasticNet: MAE=4.9619, RMSE=6.2295, R²=0.0535
+
+--- K=300 ---
+Ridge: MAE=4.972, RMSE=6.1877, R²=0.0661
+Lasso: MAE=4.8317, RMSE=6.1091, R²=0.0897
+ElasticNet: MAE=4.9613, RMSE=6.2193, R²=0.0566
+
+--- K=500 ---
+Ridge: MAE=4.9926, RMSE=6.1081, R²=0.09
+Lasso: MAE=4.8471, RMSE=6.0416, R²=0.1097
+ElasticNet: MAE=4.9692, RMSE=6.175, R²=0.07
+
+--- K=1000 ---
+Ridge: MAE=5.1639, RMSE=6.2532, R²=0.0463
+Lasso: MAE=5.217, RMSE=6.2641, R²=0.043
+ElasticNet: MAE=5.1682, RMSE=6.3506, R²=0.0163
+
+BEST: Lasso (K=100) - MAE: 4.7702

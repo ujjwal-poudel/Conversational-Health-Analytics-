@@ -1,0 +1,36 @@
+{
+    "experiment": "V7: Linear Models",
+    "feature_selection": true,
+    "k_features": 500,
+    "results": [
+        {
+            "model": "Ridge",
+            "rmse": 6.1081,
+            "mae": 4.9926,
+            "r2": 0.09,
+            "cv_rmse": 5.2271,
+            "best_alpha": 1000.0
+        },
+        {
+            "model": "Lasso",
+            "rmse": 6.0416,
+            "mae": 4.8471,
+            "r2": 0.1097,
+            "cv_rmse": 5.4852,
+            "best_alpha": 0.4942,
+            "nonzero_coefs": 31
+        },
+        {
+            "model": "ElasticNet",
+            "rmse": 6.175,
+            "mae": 4.9692,
+            "r2": 0.07,
+            "cv_rmse": 5.1852,
+            "best_alpha": 2.8072,
+            "best_l1_ratio": 0.1,
+            "nonzero_coefs": 136
+        }
+    ],
+    "best_model": "Lasso",
+    "best_mae": 4.8471
+}

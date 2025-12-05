@@ -1,0 +1,44 @@
+============================================================
+EXPERIMENT: V6: PCA (768→100) + Segment Pooling (3 segments)
+============================================================
+
+Model: XGBoost
+
+--- Feature Engineering Pipeline ---
+
+  Step 1: Wav2Vec2 embeddings (768 dims per frame)
+          -> Model: superb/wav2vec2-base-superb-er (emotion-tuned)
+          -> PCA reduction (768 → 100 dims)
+          -> Segment pooling (3 segments: Begin/Mid/End)
+          -> 4 stats per segment (mean, std, min, max)
+          -> 100 × 4 × 3 = 1,200 features
+
+  Step 2: Prosody features (13 dims per frame)
+          -> F0, RMS, ZCR, spectral centroid/bandwidth/rolloff, contrast
+          -> Segment pooling (3 segments: Begin/Mid/End)
+          -> 4 stats per segment (mean, std, min, max)
+          -> 13 × 4 × 3 = 156 features
+
+  Step 3: Concatenate
+          -> 1,200 + 156 = 1,356 total features
+
+
+--- Dataset Info ---
+  Train+Dev samples: 142
+  Test samples: 47
+  Total features: 2556
+  Feature/Sample ratio: 18.00
+
+--- Cross-Validation (train+dev) ---
+  Mean RMSE: 5.5376
+  Std RMSE:  0.3527
+  Fold RMSEs: [5.0098, 5.7043, 5.908, 5.8316, 5.2342]
+
+--- Test Set Performance ---
+  RMSE: 6.2090
+  MAE:  5.2046
+  R²:   0.0597
+
+--- Interpretation ---
+  Model slightly better than predicting mean.
+============================================================

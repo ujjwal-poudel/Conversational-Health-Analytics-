@@ -1,0 +1,12 @@
+Model: XGBoost
+Features: Wav2Vec2 + Prosody (pooled)
+
+Cross-Validation (train+dev):
+  Mean RMSE: 5.4716
+  Std RMSE:  0.3035
+  Fold RMSEs: [5.55859283468439, 5.934033482149961, 5.388672624213799, 5.486995848030271, 4.989889134033485]
+
+Test Set Performance:
+  RMSE: 6.9307
+  MAE:  5.6645
+  R²:   -0.1716

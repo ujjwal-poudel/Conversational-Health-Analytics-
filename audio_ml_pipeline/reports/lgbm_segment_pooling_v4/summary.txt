@@ -1,0 +1,12 @@
+Model: LightGBM
+Features: Wav2Vec2 + Prosody (pooled)
+
+Cross-Validation (train+dev):
+  Mean RMSE: 5.1638
+  Std RMSE:  0.2953
+  Fold RMSEs: [5.295036200017468, 4.706887952974083, 5.613438902998176, 5.104868846962784, 5.098737195339402]
+
+Test Set Performance:
+  RMSE: 6.2036
+  MAE:  5.1288
+  R²:   0.0614

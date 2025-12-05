@@ -1,0 +1,47 @@
+
+============================================================
+V8: FINAL BEST MODEL - Lasso Regression
+============================================================
+
+Created: 2025-12-05 14:08:01
+
+--- Model Configuration ---
+  Model Type: LassoCV with SelectKBest
+  Feature Selection: f_regression, K=55
+  Best Alpha (regularization): 0.376494
+  Non-zero Coefficients: 11/55
+
+--- Dataset ---
+  Train+Dev samples: 142
+  Test samples: 47
+  Original features: 2556
+  Selected features: 55
+
+--- Cross-Validation Results ---
+  CV RMSE: 5.2029
+  CV MAE:  4.2689
+
+--- Test Set Results ---
+  RMSE: 5.7840
+  MAE:  4.7137  <-- BEST ACHIEVED!
+  R²:   0.1840
+
+--- Saved Artifacts ---
+  Model:    /Users/ujjwalpoudel/Documents/insane_projects/Conversational-Health-Analytics-/audio_ml_pipeline/src/training/../../models/lasso_final_v8/lasso_model.joblib
+  Scaler:   /Users/ujjwalpoudel/Documents/insane_projects/Conversational-Health-Analytics-/audio_ml_pipeline/src/training/../../models/lasso_final_v8/scaler.joblib
+  Selector: /Users/ujjwalpoudel/Documents/insane_projects/Conversational-Health-Analytics-/audio_ml_pipeline/src/training/../../models/lasso_final_v8/selector.joblib
+  Config:   /Users/ujjwalpoudel/Documents/insane_projects/Conversational-Health-Analytics-/audio_ml_pipeline/src/training/../../models/lasso_final_v8/config.json
+
+--- Inference Usage ---
+  from joblib import load
+  
+  model = load('models/lasso_final_v8/lasso_model.joblib')
+  scaler = load('models/lasso_final_v8/scaler.joblib')
+  selector = load('models/lasso_final_v8/selector.joblib')
+  
+  # For new data:
+  X_scaled = scaler.transform(X_new)
+  X_selected = selector.transform(X_scaled)
+  prediction = model.predict(X_selected)
+
+============================================================

@@ -1,0 +1,41 @@
+============================================================
+EXPERIMENT: V5: PCA on Wav2Vec2 (768→50) + Prosody
+============================================================
+
+Model: XGBoost
+
+--- Feature Engineering Pipeline ---
+
+  Step 1: Wav2Vec2 embeddings (768 dims per frame)
+          -> PCA reduction (768 → 50 dims)
+          -> Pool with 4 stats (mean, std, min, max)
+          -> 50 × 4 = 200 features
+
+  Step 2: Prosody features (13 dims per frame)
+          -> F0, RMS, ZCR, spectral centroid/bandwidth/rolloff, contrast
+          -> Pool with 4 stats (mean, std, min, max)
+          -> 13 × 4 = 52 features
+
+  Step 3: Concatenate
+          -> 200 + 52 = 252 total features
+
+
+--- Dataset Info ---
+  Train+Dev samples: 142
+  Test samples: 47
+  Total features: 252
+  Feature/Sample ratio: 1.77
+
+--- Cross-Validation (train+dev) ---
+  Mean RMSE: 5.3892
+  Std RMSE:  0.2680
+  Fold RMSEs: [5.4489, 5.1327, 5.884, 5.2553, 5.2249]
+
+--- Test Set Performance ---
+  RMSE: 6.2451
+  MAE:  5.1898
+  R²:   0.0488
+
+--- Interpretation ---
+  Model slightly better than predicting mean.
+============================================================
