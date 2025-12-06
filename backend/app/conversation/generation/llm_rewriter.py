@@ -104,9 +104,10 @@ class LLMRewriter:
         
         # Pattern: [transition phrase] [punctuation] [question]
         # Look for transition words followed by a question
+        # IMPORTANT: Order longest to shortest to prevent partial matching (e.g., "Alright" matching inside "Alright, let's shift")
         transition_patterns = [
-            r'((?:Okay|Alright|Sure|Okay then|Alright, let\'s shift)[.,\s]+)(.+)',
-            r'((?:Let\'s move on|Moving on)[.,\s]+)(.+)',
+            r'((?:Alright, let[\'’]s shift|Okay then|Okay|Alright|Sure)[.,\s]+)(.+)',
+            r'((?:Let[\'’]s move on|Moving on)[.,\s]+)(.+)',
         ]
         
         for pattern in transition_patterns:

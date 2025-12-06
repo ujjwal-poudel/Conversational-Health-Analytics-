@@ -222,10 +222,15 @@ async def get_fused_score(
     source = ScoreSource.FAILED
     
     if text_score is not None and audio_score is not None:
-        # Both succeeded - use min fusion
-        final_score = min(text_score, audio_score)
-        source = ScoreSource.FUSION
-        print(f"[FUSION] Min fusion: min({text_score:.4f}, {audio_score:.4f}) = {final_score:.4f}")
+        # Both succeeded
+        if text_score == 0 or audio_score == 0:
+            final_score = (text_score + audio_score) / 2
+            source = ScoreSource.FUSION
+            print(f"[FUSION] Zero detected - using average: ({text_score:.4f} + {audio_score:.4f}) / 2 = {final_score:.4f}")
+        else:
+            final_score = min(text_score, audio_score)
+            source = ScoreSource.FUSION
+            print(f"[FUSION] Standard min fusion: min({text_score:.4f}, {audio_score:.4f}) = {final_score:.4f}")
     
     elif text_score is not None:
         # Only text succeeded

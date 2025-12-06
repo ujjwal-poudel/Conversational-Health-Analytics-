@@ -1,0 +1,133 @@
+/* Mode Select Page */
+
+.mode-select {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background: var(--bg-primary);
+    position: relative;
+}
+
+/* Header with clickable orb back button */
+.mode-select__header {
+    position: fixed;
+    top: 40px;
+    left: 40px;
+    z-index: 100;
+}
+
+.mode-select__back-orb {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    border-radius: 50%;
+    display: block;
+}
+
+.mode-select__back-orb:hover {
+    transform: scale(1.1);
+}
+
+.mode-select__back-orb:active {
+    transform: scale(0.95);
+}
+
+.mode-select__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.mode-select__title {
+    font-size: 1.8rem;
+    font-weight: 400;
+    color: var(--text-primary);
+    margin-bottom: 40px;
+    max-width: 500px;
+    line-height: 1.4;
+}
+
+.mode-select__greeting {
+    color: var(--accent-teal);
+}
+
+.mode-select__toggle {
+    display: flex;
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 40px;
+}
+
+.mode-select__option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.mode-select__option:hover {
+    color: var(--text-primary);
+}
+
+.mode-select__option--active {
+    background: var(--accent-purple);
+    color: white;
+}
+
+.mode-select__option--active:hover {
+    color: white;
+}
+
+.mode-select__continue {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    background: var(--accent-purple);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.mode-select__continue:hover {
+    background: #6d28d9;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .mode-select__orb {
+        top: 20px;
+        left: 20px;
+    }
+
+    .mode-select__title {
+        font-size: 1.4rem;
+    }
+
+    .mode-select__option {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}

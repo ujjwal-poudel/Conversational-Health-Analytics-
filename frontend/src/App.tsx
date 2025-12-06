@@ -1,47 +1,48 @@
-import { useState } from 'react'
-import Layout from './components/Layout'
-import Chatbot from './components/Chatbot'
-import AudioChat from './components/AudioChat'
-import './App.css'
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import Home from './pages/Home';
+import ModeSelect from './pages/ModeSelect';
+import TextChat from './pages/TextChat';
+import VoiceChat from './pages/VoiceChat';
+import Results from './pages/Results';
+import './App.css';
 
-function App() {
-  const [view, setView] = useState<'chatbot' | 'audiochat'>('chatbot')
+// Wrapper component to handle refresh-to-home
+function NavigationGuard({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  return (
-    <Layout>
-      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
-        <button
-          onClick={() => setView('chatbot')}
-          style={{
-            padding: '8px 16px',
-            background: view === 'chatbot' ? '#764ba2' : 'rgba(255,255,255,0.1)',
-            border: 'none',
-            borderRadius: '20px',
-            color: 'white',
-            cursor: 'pointer'
-          }}
-        >
-          💬 Text Chat
-        </button>
-        <button
-          onClick={() => setView('audiochat')}
-          style={{
-            padding: '8px 16px',
-            background: view === 'audiochat' ? '#764ba2' : 'rgba(255,255,255,0.1)',
-            border: 'none',
-            borderRadius: '20px',
-            color: 'white',
-            cursor: 'pointer'
-          }}
-        >
-          🎤 Voice Chat
-        </button>
-      </div>
+  useEffect(() => {
+    // Check if this is a fresh page load (refresh)
+    const isInAppNavigation = sessionStorage.getItem('inAppNavigation');
 
-      {view === 'chatbot' ? <Chatbot /> : <AudioChat />}
-    </Layout>
-  )
+    if (!isInAppNavigation && location.pathname !== '/') {
+      // Fresh load/refresh on a non-home page -> redirect to home
+      navigate('/', { replace: true });
+    }
+
+    // Mark that we're now in the app
+    sessionStorage.setItem('inAppNavigation', 'true');
+  }, []);
+
+  return <>{children}</>;
 }
 
-export default App
+function App() {
+  return (
+    <Router>
+      <NavigationGuard>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/mode" element={<ModeSelect />} />
+          <Route path="/chat" element={<TextChat />} />
+          <Route path="/audio" element={<VoiceChat />} />
+          <Route path="/results" element={<Results />} />
+        </Routes>
+      </NavigationGuard>
+    </Router>
+  );
+}
+
+export default App;
 

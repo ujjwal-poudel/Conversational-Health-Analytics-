@@ -1,0 +1,374 @@
+/* Voice Chat Page */
+
+.voice-chat {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary);
+    position: relative;
+    padding: 40px;
+}
+
+.voice-chat--loading {
+    gap: 40px;
+}
+
+.voice-chat--blocked {
+    background: rgba(0, 0, 0, 0.95);
+}
+
+.voice-chat__loading-text {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+/* Header with clickable orb back button */
+.voice-chat__header {
+    position: fixed;
+    top: 40px;
+    left: 40px;
+    z-index: 100;
+}
+
+.voice-chat__back-orb {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    border-radius: 50%;
+    display: block;
+}
+
+.voice-chat__back-orb:hover {
+    transform: scale(1.1);
+}
+
+.voice-chat__back-orb:active {
+    transform: scale(0.95);
+}
+
+/* Main content */
+.voice-chat__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 600px;
+}
+
+/* Main orb */
+.voice-chat__orb-main {
+    margin-bottom: 40px;
+    transition: all 1.5s ease-in-out;
+}
+
+/* Base style for inner orb elements to ensure smooth transition */
+.voice-chat__orb-main .gradient-orb__inner {
+    transition: all 1.5s ease-in-out;
+    filter: brightness(1) contrast(1) hue-rotate(0deg);
+}
+
+.voice-chat__orb-main .gradient-orb__glow {
+    transition: opacity 1.5s ease-in-out;
+    opacity: 0;
+}
+
+/* Speaking State: Subtle pulse, strong glow */
+.voice-chat__orb-main.speaking {
+    transform: scale(1.1);
+}
+
+.voice-chat__orb-main.speaking .gradient-orb__inner {
+    animation: orbPulse 2s ease-in-out infinite;
+    filter: brightness(1.2) contrast(1.1) hue-rotate(0deg);
+}
+
+.voice-chat__orb-main.speaking .gradient-orb__glow {
+    animation: glowPulse 2s ease-in-out infinite;
+    opacity: 1;
+    /* Fade in handled by transition */
+}
+
+/* Listening State */
+.voice-chat__orb-main.listening {
+    transform: scale(1.05);
+}
+
+.voice-chat__orb-main.listening .gradient-orb__inner {
+    filter: hue-rotate(90deg) brightness(1.1);
+}
+
+.voice-chat__orb-main.listening .gradient-orb__glow {
+    opacity: 0.8;
+}
+
+/* Processing State: KEEPS GRADIENT, STATIC */
+.voice-chat__orb-main.processing {
+    transform: scale(1);
+}
+
+.voice-chat__orb-main.processing .gradient-orb__inner {
+    animation: none !important;
+    filter: brightness(1) contrast(1) hue-rotate(0deg);
+    box-shadow: none !important;
+}
+
+.voice-chat__orb-main.processing .gradient-orb__glow {
+    opacity: 0 !important;
+}
+
+/* Pulse animations - removed box-shadow snapping, relying on opacity/scale */
+@keyframes orbPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+@keyframes glowPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+/* Question text */
+.voice-chat__question {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+    min-height: 3.6rem;
+}
+
+.fade-in {
+    animation: fadeSlideIn 0.8s ease-out forwards;
+}
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* User response */
+.voice-chat__user-response {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    font-style: italic;
+    min-height: 1.5rem;
+    animation: fadeSlideIn 0.8s ease-out forwards;
+}
+
+/* Status indicators */
+.voice-chat__status {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 20px;
+}
+
+.status--speaking {
+    color: var(--accent-purple);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status--recording {
+    color: var(--accent-success);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.status--processing {
+    color: var(--text-secondary);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Quit button */
+.voice-chat__quit {
+    position: absolute;
+    bottom: 60px;
+    padding: 12px 28px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.voice-chat__quit:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+/* Mic denied overlay */
+.mic-denied {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px;
+    background: var(--bg-card);
+    border-radius: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.mic-denied__icon {
+    font-size: 4rem;
+    margin-bottom: 24px;
+    opacity: 0.5;
+}
+
+.mic-denied h2 {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.mic-denied p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.mic-denied button {
+    padding: 12px 28px;
+    background: var(--accent-purple);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.mic-denied button:hover {
+    background: #6d28d9;
+}
+
+/* Result overlay - reuse from TextChat */
+.voice-chat .result-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+}
+
+.voice-chat .result-card {
+    background: var(--bg-card);
+    border-radius: 24px;
+    padding: 48px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.voice-chat .result__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+.voice-chat .result__score {
+    font-size: 4rem;
+    font-weight: 300;
+    color: var(--accent-teal);
+    margin-bottom: 8px;
+}
+
+.voice-chat .result__subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+}
+
+.voice-chat .result__content {
+    text-align: left;
+    margin-bottom: 32px;
+}
+
+.voice-chat .result__main-text {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.voice-chat .result__button {
+    padding: 14px 32px;
+    background: var(--accent-purple);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.voice-chat .result__button:hover {
+    background: #6d28d9;
+    transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .voice-chat__orb-small {
+        top: 20px;
+        left: 20px;
+    }
+
+    .voice-chat__question {
+        font-size: 1.2rem;
+    }
+
+    .voice-chat__quit {
+        bottom: 30px;
+    }
+}
