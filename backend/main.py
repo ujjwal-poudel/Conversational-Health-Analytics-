@@ -43,10 +43,11 @@ async def lifespan(app: FastAPI):
     device = inference_service.set_device()
     
     # Try different possible model paths
+    # Best model is model_2_13 (epoch 14) with MAE=4.73
     possible_paths = [
-        "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_15.pt",
-        "models/robert_multilabel_no-regression_/model_2_15.pt",
-        "model_2_15.pt"
+        "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_13.pt",
+        "models/robert_multilabel_no-regression_/model_2_13.pt",
+        "model_2_13.pt"
     ]
     
     model_path = None
@@ -56,7 +57,6 @@ async def lifespan(app: FastAPI):
             break
             
     if model_path:
-        print(f"Loading model from: {model_path}...")
         model, tokenizer = inference_service.load_artifacts(
             model_path=model_path,
             tokenizer_name="sentence-transformers/all-distilroberta-v1",
@@ -76,6 +76,21 @@ async def lifespan(app: FastAPI):
         print("Semantic Classifier loaded.")
     except Exception as e:
         print(f"WARNING: Failed to load Semantic Classifier: {e}")
+
+    # 4. Initialize Audio Inference Service (for multimodal fusion)
+    print("Initializing Audio Inference Service...")
+    try:
+        from src.audio_inference_service import AudioInferenceService
+        audio_service = AudioInferenceService()
+        audio_service.load_models()
+        app.state.audio_service = audio_service
+        print("Audio Inference Service loaded successfully.")
+    except FileNotFoundError as e:
+        print(f"WARNING: Audio models not found (harddrive may not be mounted): {e}")
+        app.state.audio_service = None
+    except Exception as e:
+        print(f"WARNING: Failed to load Audio Inference Service: {e}")
+        app.state.audio_service = None
 
     yield
     # Clean up resources if needed
