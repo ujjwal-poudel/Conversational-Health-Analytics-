@@ -196,7 +196,7 @@ class AudioConversationOrchestrator:
             )
 
             print(f"[ORCHESTRATOR] User-only audio saved: {user_only_path}")
-            print(f"[ORCHESTRATOR] Full conversation audio saved: {full_conversation_path}")
+            # Note: Full conversation path is already logged by audio_merger
             
             # Note: We do NOT delete the session directory here anymore.
             # The frontend needs the final audio files to play them.
