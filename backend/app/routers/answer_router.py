@@ -25,7 +25,7 @@ from src.inference_service import load_artifacts, get_depression_score, set_devi
 from src.semantic_inference import get_semantic_classifier
 # -- End of Modification --
 
-print("Real depression scoring model loaded successfully")
+# Note: Models are loaded in main.py lifespan, not here
 
 router = APIRouter()
 
@@ -118,11 +118,11 @@ def initialize_model():
         print("Initializing depression scoring model...")
         _device = set_device()
         
-        # Try different possible model paths
+        # Try different possible model paths (model_2_13 is best - epoch 14)
         possible_paths = [
-            "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_15.pt",
-            "models/robert_multilabel_no-regression_/model_2_15.pt",
-            "model_2_15.pt"
+            "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_13.pt",
+            "models/robert_multilabel_no-regression_/model_2_13.pt",
+            "model_2_13.pt"
         ]
         
         model_path = None
