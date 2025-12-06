@@ -29,6 +29,8 @@ import warnings
 # Suppress FP16 warning on CPU
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU")
 
+# Note: MPS (Mac GPU) doesn't support Whisper's sparse tensors, so we use CPU
+# For faster transcription, use WHISPER_MODEL_SIZE=tiny in your .env file
 
 # Load Whisper model once at module import time.
 try:
