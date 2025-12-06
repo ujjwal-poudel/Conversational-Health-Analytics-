@@ -173,70 +173,130 @@ async def process_audio_turn(
                 # Get transcript for regression model
                 transcript = controller.get_inference_pairs()
                 
-                # Calculate depression score
+                # Get models from app state
                 depression_model = getattr(request.app.state, "depression_model", None)
                 tokenizer = getattr(request.app.state, "depression_tokenizer", None)
                 device = getattr(request.app.state, "device", None)
+                audio_service = getattr(request.app.state, "audio_service", None)
                 
                 depression_score = None
                 semantic_risk_label = None
                 consistency_status = None
+                score_source = None
                 
                 if depression_model and tokenizer and device:
-                    import inference_service
                     from app.conversation.analysis.guardrails import analyze_with_semantic_guardrails
                     
-                    # Get raw regression score
-                    raw_score = inference_service.get_depression_score(
-                        transcript_turns=transcript,
-                        model=depression_model,
-                        tokenizer=tokenizer,
-                        device=device
-                    )
+                    # Get conversation ID first (needed for audio merge)
+                    from app.routers.answer_router import get_next_id
+                    current_id = get_next_id()
                     
-                    # Apply semantic guardrails
-                    final_score, label, status, sim_0, sim_1 = analyze_with_semantic_guardrails(transcript, raw_score)
-                    
-                    depression_score = final_score
-                    semantic_risk_label = label
-                    consistency_status = status
-                    
-                    print(f"[AUDIO] Final Score: {depression_score}")
-                    print(f"[AUDIO] Semantic Label: {semantic_risk_label}")
-                    print(f"[AUDIO] Status: {consistency_status}")
-                    
-                    # Save to JSONL
+                    # Step 1: Merge audio files FIRST (needed for audio model)
+                    user_audio_path = None
                     try:
-                        from app.routers.answer_router import get_next_id, save_to_jsonl
-                        current_id = get_next_id()
-                        save_to_jsonl(current_id, transcript, final_score)
-                        print(f"[AUDIO] Saved conversation to user_data.jsonl with ID: {current_id}")
-                        
-                        # Merge and save audio files
-                        try:
-                            merged_audio_paths = controller.finalize_conversation(current_id)
-                            print(f"[AUDIO] User-only audio: {merged_audio_paths['user_only_path']}")
-                            print(f"[AUDIO] Full conversation audio: {merged_audio_paths['full_conversation_path']}")
-                            
-                            # Add merged paths to result
-                            result['merged_audio'] = merged_audio_paths
-                            
-                        except Exception as e:
-                            print(f"[AUDIO] WARNING: Failed to merge audio files: {e}")
-                        
+                        merged_audio_paths = controller.finalize_conversation(current_id)
+                        user_audio_path = merged_audio_paths.get('user_only_path')
+                        # Note: Paths are already logged by orchestrator and merger
+                        result['merged_audio'] = merged_audio_paths
                     except Exception as e:
-                        print(f"[AUDIO] WARNING: Failed to save user data: {e}")
+                        print(f"[AUDIO] WARNING: Failed to merge audio files: {e}")
+                    
+                    # Step 2: Run fusion (parallel text + audio with fallback)
+                    if audio_service is not None and audio_service.is_loaded() and user_audio_path:
+                        print("[AUDIO] Running multimodal fusion...")
+                        from src.fusion_service import get_fused_score
+                        
+                        fusion_result = await get_fused_score(
+                            transcript_turns=transcript,
+                            audio_path=user_audio_path,
+                            text_model=depression_model,
+                            tokenizer=tokenizer,
+                            device=device,
+                            audio_service=audio_service,
+                            timeout=40.0
+                        )
+                        
+                        raw_score = fusion_result.score
+                        score_source = fusion_result.source.value
+                        
+                        # Log fusion details
+                        print(f"[AUDIO] Fusion result: {score_source}")
+                        if fusion_result.text_score is not None:
+                            print(f"[AUDIO]   Text score: {fusion_result.text_score:.4f}")
+                        if fusion_result.audio_score is not None:
+                            print(f"[AUDIO]   Audio score: {fusion_result.audio_score:.4f}")
+                        if fusion_result.text_error:
+                            print(f"[AUDIO]   Text error: {fusion_result.text_error}")
+                        if fusion_result.audio_error:
+                            print(f"[AUDIO]   Audio error: {fusion_result.audio_error}")
+                        
+                        # Add fusion details to result
+                        result['fusion_details'] = {
+                            'text_score': fusion_result.text_score,
+                            'audio_score': fusion_result.audio_score,
+                            'source': score_source,
+                        }
+                    else:
+                        # Fallback to text-only if no audio service
+                        print("[AUDIO] Audio service not available - using text-only scoring")
+                        import inference_service
+                        raw_score = inference_service.get_depression_score(
+                            transcript_turns=transcript,
+                            model=depression_model,
+                            tokenizer=tokenizer,
+                            device=device
+                        )
+                        score_source = "text"
+                    
+                    # Step 3: Apply semantic guardrails to the fused/text score
+                    if raw_score is not None:
+                        final_score, label, status, sim_0, sim_1 = analyze_with_semantic_guardrails(transcript, raw_score)
+                        
+                        depression_score = final_score
+                        semantic_risk_label = label
+                        consistency_status = status
+                        
+                        print(f"[AUDIO] Final Score: {depression_score} (source: {score_source})")
+                        print(f"[AUDIO] Semantic Label: {semantic_risk_label}")
+                        print(f"[AUDIO] Status: {consistency_status}")
+                        
+                        # Save to JSONL
+                        try:
+                            from app.routers.answer_router import save_to_jsonl
+                            save_to_jsonl(current_id, transcript, final_score)
+                            print(f"[AUDIO] Saved conversation to user_data.jsonl with ID: {current_id}")
+                        except Exception as e:
+                            print(f"[AUDIO] WARNING: Failed to save user data: {e}")
+                        
+                        # Log completed conversation to external file
+                        try:
+                            from src.conversation_logger import log_completed_conversation
+                            log_completed_conversation(
+                                conversation_id=current_id,
+                                turns=transcript,
+                                final_score=final_score,
+                                source=score_source,
+                                semantic_label=semantic_risk_label
+                            )
+                        except Exception as e:
+                            print(f"[AUDIO] WARNING: Failed to log conversation: {e}")
+                    else:
+                        print("[AUDIO] WARNING: No score available from fusion or text model")
                     
                     # Add scores to result
                     result['depression_score'] = depression_score
                     result['semantic_risk_label'] = semantic_risk_label
                     result['consistency_status'] = consistency_status
+                    result['score_source'] = score_source
                     
                 else:
                     print("[AUDIO] WARNING: Depression model not loaded. Skipping scoring.")
                     
             except Exception as e:
                 print(f"[AUDIO] Error in final processing: {e}")
+                import traceback
+                traceback.print_exc()
+        
         
         # Convert audio paths to URLs
         if 'response_audio_paths' in result:
