@@ -26,8 +26,8 @@ const TextChat: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
-    const [depressionScore, setDepressionScore] = useState<number | null>(null);
-    const [consistencyStatus, setConsistencyStatus] = useState<string | null>(null);
+    const [_depressionScore, setDepressionScore] = useState<number | null>(null);
+    const [_consistencyStatus, setConsistencyStatus] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -194,30 +194,31 @@ const TextChat: React.FC = () => {
         }
     };
 
-    const getResultContent = () => {
-        if (depressionScore === null) return null;
+    // Unused function - commented out
+    // const getResultContent = () => {
+    //     if (depressionScore === null) return null;
 
-        const isDepressed = depressionScore >= 10;
-        const mainText = isDepressed
-            ? "Our AI model suggests you may have signs of depression."
-            : "Our AI model suggests you don't show significant signs of depression.";
+    //     const isDepressed = depressionScore >= 10;
+    //     const mainText = isDepressed
+    //         ? "Our AI model suggests you may have signs of depression."
+    //         : "Our AI model suggests you don't show significant signs of depression.";
 
-        let semanticText = "";
-        if (consistencyStatus === 'conflict_potential_false_negative') {
-            semanticText = "However, our semantic analysis detected patterns similar to those who experience depression.";
-        } else if (consistencyStatus === 'conflict_potential_false_positive') {
-            semanticText = "Our semantic analysis suggests your conversation style aligns with healthy patterns.";
-        } else if (consistencyStatus === 'strong_agreement') {
-            semanticText = "Our semantic analysis confirms this finding.";
-        }
+    //     let semanticText = "";
+    //     if (consistencyStatus === 'conflict_potential_false_negative') {
+    //         semanticText = "However, our semantic analysis detected patterns similar to those who experience depression.";
+    //     } else if (consistencyStatus === 'conflict_potential_false_positive') {
+    //         semanticText = "Our semantic analysis suggests your conversation style aligns with healthy patterns.";
+    //     } else if (consistencyStatus === 'strong_agreement') {
+    //         semanticText = "Our semantic analysis confirms this finding.";
+    //     }
 
-        return (
-            <div className="result__content">
-                <p className="result__main-text">{mainText}</p>
-                {semanticText && <p className="result__semantic-text">{semanticText}</p>}
-            </div>
-        );
-    };
+    //     return (
+    //         <div className="result__content">
+    //             <p className="result__main-text">{mainText}</p>
+    //             {semanticText && <p className="result__semantic-text">{semanticText}</p>}
+    //         </div>
+    //     );
+    // };
 
     return (
         <div className="text-chat">

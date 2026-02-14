@@ -11,7 +11,7 @@ const Results: React.FC<ResultsProps> = ({ score }) => {
   // But for visual purposes, we'll map it to a percentage
   const maxScore = 27
   const percentage = Math.min((score / maxScore) * 100, 100)
-  const rotation = (percentage / 100) * 180 - 90 // -90 to 90 degrees
+  // const rotation = (percentage / 100) * 180 - 90 // -90 to 90 degrees
 
   // Determine severity level
   const getSeverityLevel = () => {

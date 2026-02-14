@@ -52,7 +52,7 @@ const Chatbot = () => {
         const handleBeforeUnload = () => {
             if (isStarted && !isFinished) {
                 // sendBeacon is more reliable than fetch during page unload
-                navigator.sendBeacon(`${API_BASE}/api/v1/chat/cleanup`);
+                navigator.sendBeacon(`${API_BASE_URL}/cleanup`);
             }
         };
 
