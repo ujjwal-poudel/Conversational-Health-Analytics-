@@ -2,13 +2,13 @@
  * API Configuration with Auto-Failover
  * 
  * Automatically selects the best available API endpoint:
- * 1. Tries cloud endpoint first (EC2 production)
+ * 1. Tries cloud endpoint first (Cloudflare HTTPS tunnel)
  * 2. Falls back to localhost if cloud is unavailable
  * 3. Logs the selected endpoint to console
  */
 
 // Available endpoints (priority order)
-const CLOUD_API = 'http://18.216.62.242:8000';
+const CLOUD_API = 'https://pick-heating-house-remember.trycloudflare.com';
 const LOCAL_API = 'http://localhost:8000';
 
 // Cache key for localStorage
