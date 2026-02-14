@@ -8,7 +8,7 @@
  */
 
 // Available endpoints (priority order)
-const CLOUD_API = 'https://pick-heating-house-remember.trycloudflare.com';
+const CLOUD_API = 'https://penalty-publicity-vintage-gamecube.trycloudflare.com';
 const LOCAL_API = 'http://localhost:8000';
 
 // Cache key for localStorage
