@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { FaPaperPlane, FaRobot, FaUser } from 'react-icons/fa';
+import { getActiveApiUrl } from '../config/api';
 import './Chatbot.css';
 
 interface Message {
@@ -16,8 +17,6 @@ interface ChatResponse {
     consistency_status: string | null;
 }
 
-const API_BASE_URL = 'http://localhost:8000/api/v1/chat';
-
 const Chatbot = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
@@ -27,6 +26,7 @@ const Chatbot = () => {
     const [depressionScore, setDepressionScore] = useState<number | null>(null);
     const [consistencyStatus, setConsistencyStatus] = useState<string | null>(null);
     const [isTyping, setIsTyping] = useState(false);
+    const API_BASE_URL = `${getActiveApiUrl()}/api/v1/chat`;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +52,7 @@ const Chatbot = () => {
         const handleBeforeUnload = () => {
             if (isStarted && !isFinished) {
                 // sendBeacon is more reliable than fetch during page unload
-                navigator.sendBeacon('http://localhost:8000/api/v1/chat/cleanup');
+                navigator.sendBeacon(`${API_BASE}/api/v1/chat/cleanup`);
             }
         };
 

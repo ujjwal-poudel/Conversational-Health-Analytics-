@@ -19,12 +19,12 @@ Key Features
 
 import os
 import uuid
-import subprocess
+import asyncio
 from typing import Optional
 from app.audio.config import AudioConfig
 
 
-def synthesize_question_audio(text: str, output_dir: str = None) -> str:
+async def synthesize_question_audio(text: str, output_dir: str = None) -> str:
     """
     Synthesizes spoken audio from text using the Piper CLI and returns a WAV file path.
 
@@ -76,40 +76,39 @@ def synthesize_question_audio(text: str, output_dir: str = None) -> str:
     # Ensure the directory exists!
     os.makedirs(os.path.dirname(abs_audio_path), exist_ok=True)
     
-    abs_piper_exe = os.path.join(cwd, piper_exe_config)
-    abs_model_path = os.path.join(cwd, piper_model_config)
-    piper_dir = os.path.dirname(abs_piper_exe)
+    # Get piper executable - if it's just "piper", use it from PATH (venv)
+    # Otherwise construct absolute path
+    if piper_exe_config == "piper":
+        piper_cmd = "piper"  # Use from PATH (venv)
+    elif os.path.isabs(piper_exe_config):
+        piper_cmd = piper_exe_config  # Already absolute
+    else:
+        piper_cmd = os.path.join(cwd, piper_exe_config)  # Make absolute
     
-    # Auto-fix: Check if local piper is broken (missing libraries) and venv piper exists
-    # This handles the case where the user has a broken manual install but we installed piper-tts
-    if not os.path.exists(os.path.join(piper_dir, "libespeak-ng.1.dylib")) and "app/audio/bin/piper" in abs_piper_exe:
-        venv_piper = os.path.join(cwd, "../.newvenv/bin/piper")
-        if os.path.exists(venv_piper):
-            abs_piper_exe = venv_piper
-            # Venv piper is a python wrapper, it doesn't need to run from its dir usually, 
-            # but let's keep cwd as is or set to venv bin? 
-            # Actually, python wrapper handles paths.
-            piper_dir = os.path.dirname(abs_piper_exe)
+    # Model path - always make absolute if not already
+    if os.path.isabs(piper_model_config):
+        abs_model_path = piper_model_config
+    else:
+        abs_model_path = os.path.join(cwd, piper_model_config)
 
-    # Prepare the Piper CLI command with absolute paths
+    # Prepare the Piper CLI command
     command = [
-        abs_piper_exe,  # Use the absolute path we determined
+        piper_cmd,
         "--model", abs_model_path,
         "--output_file", abs_audio_path
     ]
     
     try:
-        # Run Piper
-        process = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=piper_dir  # Run from Piper's directory (or venv bin)
+        # Run Piper subprocess asynchronously
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
 
-        # Write text to stdin
-        stdout, stderr = process.communicate(input=text.encode("utf-8"))
+        # Write text to stdin and wait for completion
+        stdout, stderr = await process.communicate(input=text.encode("utf-8"))
 
         # Check for Piper errors
         if process.returncode != 0:

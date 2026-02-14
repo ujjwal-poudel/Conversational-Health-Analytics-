@@ -21,21 +21,28 @@ Key Features
 
 import os
 import uuid
-import whisper
-from typing import Tuple, Dict, Any
+from faster_whisper import WhisperModel
+from typing import Tuple, Dict, Any, List
 from app.audio.config import AudioConfig
 import warnings
 
 # Suppress FP16 warning on CPU
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU")
 
+# Note: faster-whisper is optimized for CPU with int8 quantization
+# For faster transcription, use WHISPER_MODEL_SIZE=tiny in your .env file
 
 # Load Whisper model once at module import time.
 try:
-    WHISPER_MODEL = whisper.load_model(AudioConfig.WHISPER_MODEL_SIZE)
-    print(f"[STT] Whisper '{AudioConfig.WHISPER_MODEL_SIZE}' model loaded successfully")
+    # faster-whisper uses int8 quantization for fast CPU inference
+    WHISPER_MODEL = WhisperModel(
+        AudioConfig.WHISPER_MODEL_SIZE,
+        device="cpu",
+        compute_type="int8"
+    )
+    print(f"[STT] faster-whisper '{AudioConfig.WHISPER_MODEL_SIZE}' model loaded successfully")
 except Exception as error:
-    raise RuntimeError(f"Failed to load Whisper model: {error}")
+    raise RuntimeError(f"Failed to load faster-whisper model: {error}")
 
 
 def transcribe_user_audio(audio_bytes: bytes, output_dir: str) -> Tuple[str, str, Dict[str, Any]]:
@@ -51,57 +58,73 @@ def transcribe_user_audio(audio_bytes: bytes, output_dir: str) -> Tuple[str, str
 
     Returns
     -------
-    tuple of (str, str, dict)
+    tuple of (str, None, dict)
         transcript : str
             The transcribed text from the audio.
-        file_path : str
-            Absolute path to the saved audio file (converted to WAV).
+        file_path : None
+            Always None (audio not saved to disk).
         timestamps : dict
             Timing information from Whisper transcription.
 
     Raises
     ------
     RuntimeError
-        If transcription fails or audio saving encounters errors.
+        If transcription fails.
     """
     try:
         from pydub import AudioSegment
         import io
+        import tempfile
         
-        # Generate unique filename with session ID prefix
-        filename = f"{os.path.basename(output_dir)}_{uuid.uuid4()}.wav"
-        file_path = os.path.join(output_dir, filename)
-
-        # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Convert audio to proper WAV format (frontend often sends WebM)
-        try:
-            audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
-            audio.export(file_path, format="wav")
-        except Exception as e:
-            # Fallback: save raw bytes if conversion fails
-            print(f"[STT] Warning: Audio conversion failed, saving raw bytes: {e}")
-            with open(file_path, "wb") as f:
-                f.write(audio_bytes)
+        # Convert audio to proper WAV format in memory
+        audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+        
+        # Export to temporary WAV file (Whisper requires file path)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
+            temp_path = temp_wav.name
+            audio.export(temp_path, format="wav")
+        
     except Exception as error:
-        raise RuntimeError(f"Failed to save user audio: {error}")
+        raise RuntimeError(f"Failed to process audio: {error}")
 
     # Perform transcription with word timestamps
     try:
-        # word_timestamps=True enables word-level timing information
-        result = WHISPER_MODEL.transcribe(file_path, word_timestamps=True)
-        transcript = result.get("text", "").strip()
+        # faster-whisper returns a generator (segments, info)
+        segments_gen, info = WHISPER_MODEL.transcribe(
+            temp_path,
+            word_timestamps=True
+        )
         
-        # Extract timestamp information
+        # Convert generator to list and build transcript
+        segments_list = list(segments_gen)
+        transcript = " ".join([seg.text for seg in segments_list]).strip()
+        
+        # Extract timestamp information (convert to dict format for compatibility)
         timestamps = {
-            "segments": result.get("segments", []),
-            "language": result.get("language", "unknown")
+            "segments": [
+                {
+                    "start": seg.start,
+                    "end": seg.end,
+                    "text": seg.text,
+                    "words": [
+                        {"word": w.word, "start": w.start, "end": w.end}
+                        for w in (seg.words or [])
+                    ] if seg.words else []
+                }
+                for seg in segments_list
+            ],
+            "language": info.language
         }
         
         print(f"[STT] Transcribed: {transcript[:50]}...")
         
     except Exception as error:
-        raise RuntimeError(f"Whisper transcription failed: {error}")
+        raise RuntimeError(f"faster-whisper transcription failed: {error}")
+    finally:
+        # Clean up temporary file
+        try:
+            os.unlink(temp_path)
+        except:
+            pass
 
-    return transcript, file_path, timestamps
+    return transcript, None, timestamps  # Don't save audio, return None for path

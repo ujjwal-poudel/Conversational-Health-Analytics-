@@ -64,7 +64,7 @@ class AudioConversationController:
         self.session_id = session_id
         self.orchestrator = AudioConversationOrchestrator(session_id, templates_base_path)
 
-    def start_conversation(self) -> Dict:
+    async def start_conversation(self) -> Dict:
         """
         Start a new audio conversation.
 
@@ -76,9 +76,9 @@ class AudioConversationController:
             - "response_audio_paths": list of str
             - "is_finished": bool
         """
-        return self.orchestrator.start_conversation()
+        return await self.orchestrator.start_conversation()
 
-    def process_audio_turn(self, wav_bytes: bytes) -> Dict:
+    async def process_audio_turn(self, wav_bytes: bytes) -> Dict:
         """
         Handle a single conversational turn based on audio input.
 
@@ -103,26 +103,27 @@ class AudioConversationController:
             - "response_audio_paths": list of str
             - "is_finished": bool
         """
-        return self.orchestrator.process_turn(wav_bytes)
+        return await self.orchestrator.process_turn(wav_bytes)
 
-    def finalize_conversation(self, conversation_id: str) -> Dict[str, str]:
-        """
-        Finalize the conversation by merging all audio files.
+    # DISABLED: No longer saving audio files to disk
+    # def finalize_conversation(self, conversation_id: str) -> Dict[str, str]:
+    #     """
+    #     Finalize the conversation by merging all audio files.
 
-        Parameters
-        ----------
-        conversation_id : str
-            ID from user_data.jsonl to use in audio filenames.
+    #     Parameters
+    #     ----------
+    #     conversation_id : str
+    #         ID from user_data.jsonl to use in audio filenames.
 
-        Returns
-        -------
-        dict
-            {
-                "user_only_path": str,
-                "full_conversation_path": str
-            }
-        """
-        return self.orchestrator.finalize_conversation(conversation_id)
+    #     Returns
+    #     -------
+    #     dict
+    #         {
+    #             "user_only_path": str,
+    #             "full_conversation_path": str
+    #         }
+    #     """
+    #     return self.orchestrator.finalize_conversation(conversation_id)
 
     def get_inference_pairs(self):
         """

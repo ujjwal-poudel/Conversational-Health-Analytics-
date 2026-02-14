@@ -19,9 +19,19 @@ Requirements:
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
-from google.genai import errors
+import requests
+import json
+
+# Make Gemini imports optional
+try:
+    from google import genai
+    from google.genai import types
+    from google.genai import errors
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    print("Warning: google-genai not installed. Gemini LLM features will be disabled.")
+    print("To enable: pip install google-genai>=1.0.0")
 
 class LLMClient:
     """
@@ -65,17 +75,94 @@ class LLMClient:
         
         self.is_active = False
         self.client = None
-        self.model_name = "gemini-2.0-flash"
+        self.model_name = "gemini-2.5-flash"
+        self.use_ollama = os.getenv("USE_OLLAMA", "false").lower() == "true"
+        self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+        self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
+        # Try Ollama first if USE_OLLAMA=true
+        if self.use_ollama:
+            if self._check_ollama():
+                print(f"Using Ollama with model: {self.ollama_model}")
+                self.is_active = True
+                return
+            else:
+                print("WARNING: Ollama not available. Falling back to Gemini...")
+
+        if not GEMINI_AVAILABLE:
+            print("WARNING: google-genai library not installed. LLM features disabled.")
+            # Try Ollama as final fallback
+            if self._check_ollama():
+                print(f"Using Ollama (fallback) with model: {self.ollama_model}")
+                self.use_ollama = True
+                self.is_active = True
+            return
+        
         if not self.api_key:
-            print(f"WARNING: API Key not found at {env_path}. LLM features will be disabled (fallback mode).")
+            print(f"WARNING: API Key not found at {env_path}.")
+            # Try Ollama as fallback
+            if self._check_ollama():
+                print(f"Using Ollama (fallback) with model: {self.ollama_model}")
+                self.use_ollama = True
+                self.is_active = True
+            else:
+                print("LLM features will be disabled (fallback mode).")
         else:
             try:
                 # Initialize the Google Gen AI Client
                 self.client = genai.Client(api_key=self.api_key)
                 self.is_active = True
             except Exception as e:
-                print(f"WARNING: Failed to initialize Gemini client: {e}. LLM features will be disabled.")
+                print(f"WARNING: Failed to initialize Gemini client: {e}.")
+                # Try Ollama as fallback
+                if self._check_ollama():
+                    print(f"Using Ollama (fallback) with model: {self.ollama_model}")
+                    self.use_ollama = True
+                    self.is_active = True
+                else:
+                    print("LLM features will be disabled.")
+    
+    def _check_ollama(self):
+        """Check if Ollama is available and running."""
+        try:
+            response = requests.get(f"{self.ollama_url}/api/tags", timeout=2)
+            return response.status_code == 200
+        except:
+            return False
+    
+    def _ollama_generate(self, prompt, system_instruction=None):
+        """Generate text using Ollama API."""
+        try:
+            # Build the prompt with system instruction
+            full_prompt = prompt
+            if system_instruction:
+                full_prompt = f"{system_instruction}\n\n{prompt}"
+            
+            payload = {
+                "model": self.ollama_model,
+                "prompt": full_prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.7,
+                    "top_p": 0.95,
+                }
+            }
+            
+            response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json=payload,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("response", "")
+            else:
+                print(f"Ollama error: {response.status_code}")
+                return None
+        except Exception as e:
+            print(f"Ollama generation error: {e}")
+            return None
 
     def get_response(self, prompt, system_instruction=None):
         """
@@ -94,8 +181,15 @@ class LLMClient:
                  Returns None if the client is inactive (fallback mode).
                  Returns a user-friendly error message if the API call fails.
         """
-        if not self.is_active or not self.client:
+        if not self.is_active:
             print("LLM Client is inactive. Skipping generation.")
+            return None
+
+        # Use Ollama if enabled
+        if self.use_ollama:
+            return self._ollama_generate(prompt, system_instruction)
+
+        if not GEMINI_AVAILABLE or not self.client:
             return None
 
         try:
@@ -122,8 +216,18 @@ class LLMClient:
                 print("Warning: Received an empty response from the model.")
                 return "I'm sorry, I didn't catch that. Could you please repeat?"
 
+        except errors.ClientError as e:
+            # Handle 429 Resource Exhausted cleanly
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                print(f"\n[LLM WARNING] Quota exhausted (Rate Limit). Switching to fallback templates.")
+            elif "404" in str(e):
+                print(f"\n[LLM WARNING] Model {self.model_name} not found. Switching to fallback templates.")
+            else:
+                print(f"\n[LLM Client Error] {type(e).__name__}: {e}")
+            return None
+            
         except Exception as e:
-            # Catch ALL exceptions (billing, quota, network, etc.)
+            # Catch ALL other exceptions
             # Log the error for debugging but return None to trigger silent fallback
             print(f"\n[LLM Client Error] {type(e).__name__}: {e}")
             print("Action: Falling back to default templates.")

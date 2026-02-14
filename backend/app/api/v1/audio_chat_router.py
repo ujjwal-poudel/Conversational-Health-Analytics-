@@ -84,7 +84,7 @@ async def start_audio_chat(request: Request, session_id: str = Form(...)):
         # Store controller for this session
         _audio_sessions[session_id] = controller
         
-        result = controller.start_conversation()
+        result = await controller.start_conversation()
         print(f"[AUDIO] First message parts: {result['response_text']}")
         
         # Convert audio paths to URLs
@@ -161,7 +161,7 @@ async def process_audio_turn(
         )
 
     try:
-        result = controller.process_audio_turn(wav_bytes)
+        result = await controller.process_audio_turn(wav_bytes)
         print(f"[AUDIO] Transcript: {result['transcript']}")
         print(f"[AUDIO] Bot response parts: {result['response_text']}")
         
@@ -192,14 +192,15 @@ async def process_audio_turn(
                     current_id = get_next_id()
                     
                     # Step 1: Merge audio files FIRST (needed for audio model)
+                    # DISABLED: No longer saving audio files to disk
                     user_audio_path = None
-                    try:
-                        merged_audio_paths = controller.finalize_conversation(current_id)
-                        user_audio_path = merged_audio_paths.get('user_only_path')
-                        # Note: Paths are already logged by orchestrator and merger
-                        result['merged_audio'] = merged_audio_paths
-                    except Exception as e:
-                        print(f"[AUDIO] WARNING: Failed to merge audio files: {e}")
+                    # try:
+                    #     merged_audio_paths = controller.finalize_conversation(current_id)
+                    #     user_audio_path = merged_audio_paths.get('user_only_path')
+                    #     # Note: Paths are already logged by orchestrator and merger
+                    #     result['merged_audio'] = merged_audio_paths
+                    # except Exception as e:
+                    #     print(f"[AUDIO] WARNING: Failed to merge audio files: {e}")
                     
                     # Step 2: Run fusion (parallel text + audio with fallback)
                     if audio_service is not None and audio_service.is_loaded() and user_audio_path:

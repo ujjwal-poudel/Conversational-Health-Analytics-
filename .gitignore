@@ -2,6 +2,7 @@
 Dataset/
 Docs/
 datasets/
+models/
 
 # model artifacts (saved .joblib, .pkl, .h5 files)
 *.joblib
@@ -167,7 +168,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+# .env
 .envrc
 .venv
 env/

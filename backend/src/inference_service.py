@@ -56,7 +56,15 @@ except ImportError as e:
 # Set these variables to match your environment.
 
 # Path to the single, best model checkpoint you want to use in production.
-MODEL_PATH = "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_15.pt" 
+# Environment variable for production, fallback to local models folder, then external drive
+MODEL_PATH = os.getenv(
+    "ROBERTA_MODEL_PATH",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "models/roberta/model_2_13.pt")
+)
+
+# Fallback to external drive if local doesn't exist (development)
+if not os.path.exists(MODEL_PATH):
+    MODEL_PATH = "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_15.pt"
 
 # Pre-trained tokenizer name (must match what was used in training).
 TOKENIZER_NAME = "sentence-transformers/all-distilroberta-v1"

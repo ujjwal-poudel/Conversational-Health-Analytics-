@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getActiveApiUrl } from '../config/api';
 import GradientOrb from '../components/GradientOrb';
 import './TextChat.css';
 
@@ -17,10 +18,9 @@ interface ChatResponse {
     consistency_status: string | null;
 }
 
-const API_BASE_URL = 'http://localhost:8000/api/v1/chat';
-
 const TextChat: React.FC = () => {
     const navigate = useNavigate();
+    const API_BASE_URL = `${getActiveApiUrl()}/api/v1/chat`;
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);

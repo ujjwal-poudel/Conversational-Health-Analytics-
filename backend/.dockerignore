@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.newvenv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Models - UNCOMMENT THESE LINES FOR PRODUCTION (include models in image)
+# For development, exclude models to use volume mounts
+# For EC2/production deployment, comment out these lines to include models
+# models/*.pt
+# models/*.joblib
+# models/*.onnx
+# models/lasso_final_v8/
+# models/pca_wav2vec2.joblib
+
+# Audio data
+audio_data/
+user_data/
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# External volumes
+/Volumes/
+
+# Cache
+.cache/
+*.pyc
+
+# Documentation (except README)
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Misc
+*.bak
+*.tmp
+*.temp

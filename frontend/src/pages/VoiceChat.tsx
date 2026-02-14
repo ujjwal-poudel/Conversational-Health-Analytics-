@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getActiveApiUrl } from '../config/api';
 import GradientOrb from '../components/GradientOrb';
 import './VoiceChat.css';
 
@@ -21,10 +22,10 @@ const SILENCE_THRESHOLD = 0.02;   // Volume level to consider as "silence"
 const SILENCE_DURATION_MS = 2000; // 2 seconds of silence after speaking
 const MAX_RECORDING_MS = 15000;   // Maximum 15 seconds recording
 const MAX_WAIT_FOR_SPEECH_MS = 8000; // If no speech after 8 seconds, stop
-const API_BASE = 'http://localhost:8000';
 
 const VoiceChat: React.FC = () => {
     const navigate = useNavigate();
+    const API_BASE = getActiveApiUrl();
 
     // Core state
     const [micStatus, setMicStatus] = useState<MicStatus>('pending');

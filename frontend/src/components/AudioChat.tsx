@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { getActiveApiUrl } from '../config/api';
 import './AudioChat.css';
 
 interface Message {
@@ -35,6 +36,7 @@ const AudioChat = () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const API_BASE_URL = getActiveApiUrl();
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,7 +53,7 @@ const AudioChat = () => {
                 const formData = new FormData();
                 formData.append('session_id', sessionId);
                 // sendBeacon is more reliable than fetch during page unload
-                navigator.sendBeacon('http://localhost:8000/api/v1/audio/chat/cleanup', formData);
+                navigator.sendBeacon(`${API_BASE_URL}/api/v1/audio/chat/cleanup`, formData);
             }
         };
 
@@ -65,7 +67,7 @@ const AudioChat = () => {
             const formData = new FormData();
             formData.append('session_id', sessionId);
 
-            const response = await fetch('http://localhost:8000/api/v1/audio/chat/start', {
+            const response = await fetch(`${API_BASE_URL}/api/v1/audio/chat/start`, {
                 method: 'POST',
                 body: formData,
             });
@@ -101,7 +103,7 @@ const AudioChat = () => {
         for (const path of paths) {
             await new Promise<void>((resolve) => {
                 // Backend returns relative path /audio/..., so we prepend base URL
-                const audio = new Audio(`http://localhost:8000${path}`);
+                const audio = new Audio(`${API_BASE_URL}${path}`);
                 audio.onended = () => resolve();
                 audio.onerror = (e) => {
                     console.error("Audio playback error:", e);
@@ -160,7 +162,7 @@ const AudioChat = () => {
         try {
             const formData = new FormData();
             formData.append('session_id', sessionId);
-            await fetch('http://localhost:8000/api/v1/audio/chat/cleanup', {
+            await fetch(`${API_BASE_URL}/api/v1/audio/chat/cleanup`, {
                 method: 'POST',
                 body: formData,
             });
@@ -178,7 +180,7 @@ const AudioChat = () => {
             formData.append('session_id', sessionId);
             formData.append('audio_file', audioBlob, 'recording.wav');
 
-            const response = await fetch('http://localhost:8000/api/v1/audio/chat/turn', {
+            const response = await fetch(`${API_BASE_URL}/api/v1/audio/chat/turn`, {
                 method: 'POST',
                 body: formData,
             });

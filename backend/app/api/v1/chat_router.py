@@ -5,8 +5,6 @@ import inference_service
 
 router = APIRouter()
 
-from app.conversation.analysis.guardrails import analyze_with_semantic_guardrails
-
 @router.post("/message", response_model=ChatResponse)
 async def chat_message(request: Request, chat_request: ChatRequest):
     print(f"\n[CHAT] Received message: '{chat_request.message}'")
@@ -29,8 +27,6 @@ async def chat_message(request: Request, chat_request: ChatRequest):
     is_finished = engine.is_finished()
     
     depression_score = None
-    semantic_risk_label = None
-    consistency_status = None
     
     if is_finished:
         print("[CHAT] Conversation finished. Calculating score...")
@@ -42,37 +38,21 @@ async def chat_message(request: Request, chat_request: ChatRequest):
         if depression_model and tokenizer and device:
             transcript = engine.get_inference_pairs()
             try:
-                # 1. Get Raw Regression Score
-                raw_score = inference_service.get_depression_score(
+                # Get depression score
+                depression_score = inference_service.get_depression_score(
                     transcript_turns=transcript,
                     model=depression_model,
                     tokenizer=tokenizer,
                     device=device
                 )
                 
-                # 2. Apply Semantic Guardrails
-                final_score, label, status, sim_0, sim_1 = analyze_with_semantic_guardrails(transcript, raw_score)
+                print(f"[CHAT] Depression Score: {depression_score:.4f}")
                 
-                depression_score = final_score
-                semantic_risk_label = label
-                consistency_status = status
-                
-                print(f"[CHAT] Final Score: {depression_score}")
-                print(f"[CHAT] Semantic Label: {semantic_risk_label}")
-                print(f"[CHAT] Status: {consistency_status}")
-                
-                # 3. Save to JSONL (Regression Score ONLY)
-                # We use the raw_score or final_score (they are usually same unless guardrail overrides, 
-                # but user asked to save "regression label", usually meaning the final numeric score used for prediction)
-                # The user said "label should only be from the regression model". 
-                # Since final_score IS the regression score (with potential guardrail flags but the number comes from regression),
-                # we will save final_score.
-                
+                # Save to JSONL
                 try:
                     from app.routers.answer_router import get_next_id, save_to_jsonl
                     current_id = get_next_id()
-                    # We save the final_score as the label
-                    save_to_jsonl(current_id, transcript, final_score)
+                    save_to_jsonl(current_id, transcript, depression_score)
                     print(f"[CHAT] Saved conversation to user_data.jsonl with ID: {current_id}")
                 except Exception as e:
                     print(f"[CHAT] WARNING: Failed to save user data: {e}")
@@ -83,11 +63,9 @@ async def chat_message(request: Request, chat_request: ChatRequest):
             print("[CHAT] WARNING: Depression model not loaded. Skipping scoring.")
     
     return ChatResponse(
-        response=bot_response,  # Now returns list of message parts
+        response=bot_response,
         is_finished=is_finished,
-        depression_score=depression_score,
-        semantic_risk_label=semantic_risk_label,
-        consistency_status=consistency_status
+        depression_score=depression_score
     )
 
 @router.post("/start", response_model=ChatResponse)

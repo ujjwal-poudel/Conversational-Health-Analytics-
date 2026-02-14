@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from .. import models, database
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Tuple
-import whisper
 
 # Import actual inference functions
 import sys
@@ -20,10 +19,7 @@ import torch
 from transformers import AutoTokenizer
 from src.inference_service import load_artifacts, get_depression_score, set_device
 
-# -- Modification --
-# (Ujjwal) added import for semantic classifier
-from src.semantic_inference import get_semantic_classifier
-# -- End of Modification --
+
 
 # Note: Models are loaded in main.py lifespan, not here
 
@@ -90,22 +86,6 @@ class QuestionAnswerRequest(BaseModel):
 
 class PredictionResponse(BaseModel):
     prediction: float
-    
-    # -- Modified --
-    # (Ujjwal) Added the semantic risk label and consistency_status
-    semantic_risk_label: str
-    consistency_status: str  # 'agreement', 'uncertainty', 'conflict'
-    # -- End of Modification --
-
-# Load Whisper model (tiny model for faster processing and lower resource usage)
-try:
-    whisper_model = whisper.load_model("tiny")
-    print("Whisper tiny model loaded successfully")
-except Exception as e:
-    print(f"Failed to load Whisper model: {e}")
-    whisper_model = None
-    
-from app.conversation.analysis.guardrails import analyze_with_semantic_guardrails
     
 def initialize_model():
     """Initialize the depression scoring model and tokenizer."""
@@ -201,19 +181,18 @@ def submit_answer(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(audio.file, buffer)
 
-    # Transcribe audio using Whisper
-    transcript = "Transcription not available - Whisper model not loaded"
-    if whisper_model:
-        try:
-            # Use Whisper to transcribe the audio file
-            result = whisper_model.transcribe(file_path)
-            transcript = result["text"].strip()
-            print(f"Whisper transcription completed: {transcript}")
-        except Exception as e:
-            print(f"Whisper transcription error: {e}")
-            transcript = f"Transcription failed: {str(e)}"
-    else:
-        transcript = "Whisper model not available - transcription disabled"
+    # Transcribe audio using faster-whisper via stt_service
+    try:
+        from app.audio.stt_service import transcribe_user_audio
+        # Read the file bytes
+        with open(file_path, "rb") as f:
+            audio_bytes = f.read()
+        # Use centralized STT service (returns transcript, path, timestamps)
+        transcript, _, _ = transcribe_user_audio(audio_bytes, UPLOAD_DIR)
+        print(f"Transcription completed: {transcript}")
+    except Exception as e:
+        print(f"Transcription error: {e}")
+        transcript = f"Transcription failed: {str(e)}"
 
     # Save answer to DB
     answer = models.Answer(
@@ -254,7 +233,7 @@ def submit_text_answer(
         turns = transform_to_turns(request)
         
         # Get depression score using the actual function
-        raw_score = get_depression_score(
+        depression_score = get_depression_score(
             transcript_turns=turns,
             model=_model,
             tokenizer=_tokenizer,
@@ -262,47 +241,14 @@ def submit_text_answer(
             turn_batch_size=16
         )
         
-        # --- Modification ---
-        # (Ujjwal) Applying semantic guardrail function
-        
-        final_score, sem_label, status, sim_0, sim_1 = analyze_with_semantic_guardrails(turns, raw_score)
-        
-        # DETAILED TERMINAL LOGGING
-        print("\n" + "#"*60)
-        print(" FINAL DECISION REPORT ".center(60, "#"))
-        print("#"*60)
-        print(f"1. RAW REGRESSION MODEL:")
-        print(f"   Score: {raw_score:.4f}")
-        print(f"   Class: {'Depressed (>=10)' if raw_score >= 10 else 'Healthy (<10)'}")
-        print("-" * 60)
-        print(f"2. SEMANTIC GUARDRAIL:")
-        print(f"   Healthy Similarity:   {sim_0:.4f}")
-        print(f"   Depressed Similarity: {sim_1:.4f}")
-        print(f"   Semantic Label:       {sem_label}")
-        print("-" * 60)
-        print(f"3. CONSISTENCY CHECK:")
-        print(f"   Status: {status.upper()}")
-        
-        if "conflict" in status:
-             print(f" WARNING: Models Disagree! Returning Regression Score with Flag.")
-        elif "agreement" in status:
-             print(f" SUCCESS: Models Agree.")
-        
-        print("-" * 60)
-        print(f"   >>> FINAL RETURNED SCORE: {final_score:.4f}")
-        print("#"*60 + "\n")
+        print(f"\n[PREDICTION] Depression Score: {depression_score:.4f}")
         
         # Get persistent ID (continues from previous session)
         current_id = get_next_id()
-        save_to_jsonl(current_id, turns, final_score)
+        save_to_jsonl(current_id, turns, depression_score)
         
-        # Returns full prediction
-        return PredictionResponse(
-            prediction=final_score,
-            semantic_risk_label=sem_label,
-            consistency_status=status
-        )
-        # --- End of Modification ---
+        # Returns prediction
+        return PredictionResponse(prediction=depression_score)
         
     except Exception as e:
         print(f"Error processing text answer: {e}")

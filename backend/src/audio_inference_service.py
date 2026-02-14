@@ -33,9 +33,24 @@ from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Model
 class AudioConfig:
     """Audio processing configuration matching training pipeline."""
     
-    # Paths to model files (on external harddrive)
-    LASSO_MODEL_DIR = "/Volumes/MACBACKUP/models/saved_models/lasso_final_v8"
-    PCA_PATH = "/Volumes/MACBACKUP/audio_data_folder/models/pca_wav2vec2.joblib"
+    # Paths to model files - environment variables for production, fallback to local
+    # Get the backend directory (parent of src/)
+    backend_dir = os.path.dirname(os.path.dirname(__file__))
+    
+    LASSO_MODEL_DIR = os.getenv(
+        "LASSO_MODEL_DIR",
+        os.path.join(backend_dir, "models/lasso/lasso_final_v8")
+    )
+    PCA_PATH = os.getenv(
+        "PCA_MODEL_PATH",
+        os.path.join(backend_dir, "models/pca/pca_wav2vec2.joblib")
+    )
+    
+    # Fallback to external drive if local doesn't exist (development)
+    if not os.path.exists(LASSO_MODEL_DIR):
+        LASSO_MODEL_DIR = "/Volumes/MACBACKUP/models/saved_models/lasso_final_v8"
+    if not os.path.exists(PCA_PATH):
+        PCA_PATH = "/Volumes/MACBACKUP/audio_data_folder/models/pca_wav2vec2.joblib"
     
     # Audio parameters (must match training)
     AUDIO_SR = 16000

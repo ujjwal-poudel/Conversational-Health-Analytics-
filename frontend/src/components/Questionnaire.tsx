@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FiArrowRight } from 'react-icons/fi'
+import { getActiveApiUrl } from '../config/api'
 import './Questionnaire.css'
 import questionsData from '../data/questions.json'
 
@@ -111,7 +112,7 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
       }
 
       // ONLY 1 API CALL - when user clicks submit
-      const response = await fetch('http://127.0.0.1:8000/submit-text-answer', {
+      const response = await fetch(`${getActiveApiUrl()}/submit-text-answer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -15,7 +15,6 @@ src_dir = os.path.join(current_dir, "src")
 sys.path.append(src_dir)
 
 import inference_service
-from src.semantic_inference import get_semantic_classifier
 from app.database import engine
 from app import models
 from app.routers import auth_router, question_router, answer_router, admin_router
@@ -45,9 +44,9 @@ async def lifespan(app: FastAPI):
     # Try different possible model paths
     # Best model is model_2_13 (epoch 14) with MAE=4.73
     possible_paths = [
+        os.getenv("ROBERTA_MODEL_PATH", "models/roberta/model_2_13.pt"),
         "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_13.pt",
-        "models/robert_multilabel_no-regression_/model_2_13.pt",
-        "model_2_13.pt"
+        "models/robert_multilabel_no-regression_/model_2_13.pt"
     ]
     
     model_path = None
@@ -69,15 +68,7 @@ async def lifespan(app: FastAPI):
     else:
         print("WARNING: Depression model file not found. Scoring will be disabled.")
 
-    # 3. Initialize Semantic Classifier
-    print("Initializing Semantic Classifier...")
-    try:
-        get_semantic_classifier()
-        print("Semantic Classifier loaded.")
-    except Exception as e:
-        print(f"WARNING: Failed to load Semantic Classifier: {e}")
-
-    # 4. Initialize Audio Inference Service (for multimodal fusion)
+    # 3. Initialize Audio Inference Service (for multimodal fusion)
     print("Initializing Audio Inference Service...")
     try:
         from src.audio_inference_service import AudioInferenceService
@@ -126,3 +117,16 @@ app.include_router(audio_chat_router.router, prefix="/api/v1", tags=["audio"])
 @app.get("/")
 def read_root():
     return {"message": "Audio Question App API"}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for load balancers and monitoring."""
+    return {
+        "status": "healthy",
+        "service": "conversational-health-analytics",
+        "models_loaded": {
+            "depression_model": hasattr(app.state, "depression_model"),
+            "audio_service": hasattr(app.state, "audio_service") and app.state.audio_service is not None,
+            "conversation_engine": hasattr(app.state, "conversation_engine")
+        }
+    }

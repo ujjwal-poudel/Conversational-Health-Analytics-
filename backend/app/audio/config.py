@@ -18,10 +18,11 @@ load_dotenv()
 class AudioConfig:
     """Configuration for audio services (STT, TTS, paths)."""
     
-    # Piper TTS - paths relative to backend/ directory where uvicorn runs
-    # Using venv installation as requested
-    PIPER_EXECUTABLE = os.getenv("PIPER_EXECUTABLE_PATH", "../.newvenv/bin/piper")
-    PIPER_MODEL_PATH = os.getenv("PIPER_MODEL_PATH", "app/audio/piper_models/en_US-lessac-medium.onnx")
+    # Piper TTS - Use system piper command from venv (installed via pip)
+    # In Docker/production, piper will be in /opt/venv/bin/piper
+    # In local dev, it will be in .newvenv/bin/piper or system PATH
+    PIPER_EXECUTABLE = os.getenv("PIPER_EXECUTABLE_PATH", "piper")  # Use system PATH by default
+    PIPER_MODEL_PATH = os.getenv("PIPER_MODEL_PATH", "models/piper/en_US-lessac-medium.onnx")
     
     # Whisper STT
     WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")

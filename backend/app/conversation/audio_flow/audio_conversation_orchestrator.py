@@ -83,17 +83,17 @@ class AudioConversationOrchestrator:
         """
         Convert raw user audio bytes into a transcript with timestamps using Whisper.
         """
-        # Transcribe user audio and save it
-        transcript, user_audio_path, timestamps = transcribe_user_audio(
+        # Transcribe user audio (no longer saves to disk)
+        transcript, _, timestamps = transcribe_user_audio(
             audio_bytes=wav_bytes,
-            output_dir=self.session_audio_dir
+            output_dir=self.session_audio_dir  # Ignored, kept for compatibility
         )
         
-        # Track user audio path
-        self.user_audio_paths.append(user_audio_path)
-        self.transcription_timestamps.append(timestamps)
+        # No longer track audio paths (not saved)
+        # self.user_audio_paths.append(user_audio_path)
+        # self.transcription_timestamps.append(timestamps)
         
-        return user_audio_path, transcript, timestamps
+        return None, transcript, timestamps  # user_audio_path is None
 
     def update_conversation_with_transcript(self, transcript: str) -> List[str]:
         """
@@ -108,14 +108,14 @@ class AudioConversationOrchestrator:
         
         return bot_response
 
-    def synthesize_question_audio(self, question_text: str) -> str:
+    async def synthesize_question_audio(self, question_text: str) -> str:
         """
         Convert a question string into audio using Piper TTS.
         """
         # Save to session directory
-        return synthesize_question_audio(question_text, output_dir=self.session_audio_dir)
+        return await synthesize_question_audio(question_text, output_dir=self.session_audio_dir)
 
-    def start_conversation(self) -> Dict[str, Union[str, List[str], List[str]]]:
+    async def start_conversation(self) -> Dict[str, Union[str, List[str], List[str]]]:
         """
         Start a new audio conversation.
         """
@@ -125,13 +125,14 @@ class AudioConversationOrchestrator:
         if isinstance(first_message, str):
             first_message = [first_message]
         
-        # Synthesize each message part into audio and track paths
+        # Synthesize each message part into audio (paths still returned for playback)
         audio_paths = []
         for text in first_message:
-            audio_path = self.synthesize_question_audio(text)
+            audio_path = await self.synthesize_question_audio(text)
             audio_paths.append(audio_path)
-            self.bot_audio_paths.append(audio_path)
-            self.interleaved_audio_paths.append(audio_path)
+            # No longer track for merging
+            # self.bot_audio_paths.append(audio_path)
+            # self.interleaved_audio_paths.append(audio_path)
         
         return {
             "response_text": first_message,
@@ -139,76 +140,78 @@ class AudioConversationOrchestrator:
             "is_finished": False
         }
 
-    def process_turn(self, wav_bytes: bytes) -> Dict[str, Union[str, List[str], List[str], bool, Dict[str, Any]]]:
+    async def process_turn(self, wav_bytes: bytes) -> Dict[str, Union[str, List[str], List[str], bool, Dict[str, Any]]]:
         """
         Execute the complete audio turn-processing pipeline.
         """
-        # Step 1: STT with timestamps
+        # Step 1: STT with timestamps (user audio not saved)
         user_audio_path, transcript, timestamps = self.transcribe_user_audio(wav_bytes)
         
-        # Add user audio to interleaved list
-        self.interleaved_audio_paths.append(user_audio_path)
+        # No longer track audio paths (not saved)
+        # self.interleaved_audio_paths.append(user_audio_path)
 
         # Step 2: Conversation logic (returns list of message parts)
         bot_response_text = self.update_conversation_with_transcript(transcript)
 
-        # Step 3: TTS - synthesize each message part and track
+        # Step 3: TTS - synthesize each message part
         audio_paths = []
         for text in bot_response_text:
-            audio_path = self.synthesize_question_audio(text)
+            audio_path = await self.synthesize_question_audio(text)
             audio_paths.append(audio_path)
-            self.bot_audio_paths.append(audio_path)
-            self.interleaved_audio_paths.append(audio_path)
+            # Still track bot audio for cleanup, but don't merge
+            # self.bot_audio_paths.append(audio_path)
+            # self.interleaved_audio_paths.append(audio_path)
 
         return {
             "transcript": transcript,
             "timestamps": timestamps,
-            "user_audio_path": user_audio_path,
+            "user_audio_path": None,  # No longer saved
             "response_text": bot_response_text,
             "response_audio_paths": audio_paths,
             "is_finished": self.conversation.is_finished()
         }
 
-    def finalize_conversation(self, conversation_id: str) -> Dict[str, str]:
-        """
-        Merge and save audio files when conversation is finished.
-        """
-        from app.audio.audio_merger import create_user_only_audio, create_full_conversation_audio
-        from app.audio.config import AudioConfig
-        import shutil
-        import os
+    # DISABLED: No longer saving audio files to disk
+    # def finalize_conversation(self, conversation_id: str) -> Dict[str, str]:
+    #     """
+    #     Merge and save audio files when conversation is finished.
+    #     """
+    #     from app.audio.audio_merger import create_user_only_audio, create_full_conversation_audio
+    #     from app.audio.config import AudioConfig
+    #     import shutil
+    #     import os
 
-        print(f"[ORCHESTRATOR] Finalizing conversation {conversation_id}")
+    #     print(f"[ORCHESTRATOR] Finalizing conversation {conversation_id}")
         
-        try:
-            # Create user-only merged audio
-            user_only_path = create_user_only_audio(
-                self.user_audio_paths,
-                AudioConfig.MERGED_AUDIO_OUTPUT_DIR,
-                conversation_id
-            )
+    #     try:
+    #         # Create user-only merged audio
+    #         user_only_path = create_user_only_audio(
+    #             self.user_audio_paths,
+    #             AudioConfig.MERGED_AUDIO_OUTPUT_DIR,
+    #             conversation_id
+    #         )
 
-            # Create full conversation merged audio
-            full_conversation_path = create_full_conversation_audio(
-                self.interleaved_audio_paths,
-                AudioConfig.MERGED_AUDIO_OUTPUT_DIR,
-                conversation_id
-            )
+    #         # Create full conversation merged audio
+    #         full_conversation_path = create_full_conversation_audio(
+    #             self.interleaved_audio_paths,
+    #             AudioConfig.MERGED_AUDIO_OUTPUT_DIR,
+    #             conversation_id
+    #         )
 
-            print(f"[ORCHESTRATOR] User-only audio saved: {user_only_path}")
-            # Note: Full conversation path is already logged by audio_merger
+    #         print(f"[ORCHESTRATOR] User-only audio saved: {user_only_path}")
+    #         # Note: Full conversation path is already logged by audio_merger
             
-            # Note: We do NOT delete the session directory here anymore.
-            # The frontend needs the final audio files to play them.
-            # Cleanup should be handled separately (e.g., via a specific endpoint or periodic task).
+    #         # Note: We do NOT delete the session directory here anymore.
+    #         # The frontend needs the final audio files to play them.
+    #         # Cleanup should be handled separately (e.g., via a specific endpoint or periodic task).
             
-            return {
-                "user_only_path": user_only_path,
-                "full_conversation_path": full_conversation_path
-            }
+    #         return {
+    #             "user_only_path": user_only_path,
+    #             "full_conversation_path": full_conversation_path
+    #         }
 
-        except Exception as error:
-            raise RuntimeError(f"Failed to finalize conversation audio: {error}")
+    #     except Exception as error:
+    #         raise RuntimeError(f"Failed to finalize conversation audio: {error}")
 
     def cleanup_session(self):
         """

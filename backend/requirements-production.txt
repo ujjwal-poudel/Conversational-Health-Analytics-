@@ -1,3 +1,9 @@
+# ===================================
+# Production Requirements for EC2
+# Python 3.11+ recommended
+# CPU-optimized (no CUDA dependencies)
+# ===================================
+
 # FastAPI and Server
 fastapi>=0.115.0
 uvicorn[standard]==0.24.0
@@ -22,9 +28,8 @@ requests>=2.31.0
 
 # Text-to-Speech (Piper TTS)
 piper-tts>=1.2.0
-pathvalidate>=3.0.0  # Required by piper-tts
 
-# Speech-to-Text (faster-whisper)
+# Speech-to-Text (faster-whisper - CPU optimized)
 faster-whisper>=1.0.0
 
 # ML/DL Core (CPU-optimized)
@@ -47,5 +52,13 @@ scikit-learn>=1.3.0
 python-dotenv>=1.0.0
 tokenizers>=0.13.0
 
-# Optional: Gemini LLM (uncomment if needed)
+# Optional: Gemini LLM (only if you switch from Ollama)
 # google-genai>=1.0.0
+
+# ===================================
+# System Dependencies (install via apt)
+# ===================================
+# sudo apt-get update
+# sudo apt-get install -y ffmpeg
+# sudo apt-get install -y python3-dev
+# sudo apt-get install -y build-essential

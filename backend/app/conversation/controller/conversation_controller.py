@@ -60,6 +60,7 @@ class ConversationController:
         self.topics: List[str] = self.template_manager.get_topic_list()
         # Use a list of remaining topics to allow dynamic reordering
         self.remaining_topics: List[str] = list(self.topics)
+        self.completed_topics: List[str] = []  # Track completed topics to prevent repeats
         self.current_topic: Optional[str] = None
 
         self.current_topic_responses: List[str] = []
@@ -129,14 +130,21 @@ class ConversationController:
 
         Uses topic detection to optionally reorder the remaining topics.
         Resets per-topic tracking in the sufficiency checker.
+        Prevents revisiting completed topics.
         """
+        # Mark current topic as completed before moving to next
+        if self.current_topic and self.current_topic not in self.completed_topics:
+            self.completed_topics.append(self.current_topic)
+        
         # Check if user input triggers a jump to a remaining topic
         override_topic = self._detect_next_topic()
 
         if override_topic and override_topic in self.remaining_topics:
-            # Move the detected topic to the front of the list
-            self.remaining_topics.remove(override_topic)
-            self.remaining_topics.insert(0, override_topic)
+            # Only use override if it hasn't been completed yet
+            if override_topic not in self.completed_topics:
+                # Move the detected topic to the front of the list
+                self.remaining_topics.remove(override_topic)
+                self.remaining_topics.insert(0, override_topic)
 
         if not self.remaining_topics:
             self.current_topic = None
@@ -144,8 +152,13 @@ class ConversationController:
 
         # Pop the next topic from the front of the list
         next_topic = self.remaining_topics.pop(0)
-        self.current_topic = next_topic
         
+        # Double-check it's not already completed (safety check)
+        if next_topic in self.completed_topics:
+            # Skip this topic and try the next one
+            return self.move_to_next_topic()
+        
+        self.current_topic = next_topic
         self.current_topic_responses = []
         self.sufficiency_checker.reset_topic(next_topic)
 
@@ -157,7 +170,7 @@ class ConversationController:
 
         Logic:
         - Concatenate all responses within the current topic.
-        - For each REMAINING topic, count occurrences of its keywords.
+        - For each REMAINING topic (excluding completed ones), count occurrences of its keywords.
         - Choose the topic with highest keyword count.
         - If tie, choose randomly among tied topics.
         - If all scores are zero, return None (use default order).
@@ -169,6 +182,10 @@ class ConversationController:
         
         scores: Dict[str, int] = {}
         for topic in self.remaining_topics:
+            # Skip topics that are already completed
+            if topic in self.completed_topics:
+                continue
+                
             keywords = self.template_manager.get_topic_keywords(topic)
             score = 0
             for kw in keywords:
