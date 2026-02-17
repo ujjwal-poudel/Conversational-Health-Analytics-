@@ -36,17 +36,17 @@ The system built on a microservices-inspired architecture, separating the fronte
 
 ```mermaid
 graph TD
-    Client[Frontend (React)] <-->|REST API / Audio Stream| API[FastAPI Backend]
+    Client["Frontend (React)"] <-->|REST API / Audio Stream| API["FastAPI Backend"]
     
     subgraph "AI Pipeline"
-        API --> STT[Whisper STT]
-        API --> LLM[Groq Llama 3]
-        API --> TTS[Piper TTS]
-        API --> Model[RoBERTa Depression Model]
+        API --> STT["Whisper STT"]
+        API --> LLM["Groq Llama 3"]
+        API --> TTS["Piper TTS"]
+        API --> Model["RoBERTa Depression Model"]
     end
     
     subgraph "Data Persistence"
-        API --> DB[(Firebase Firestore)]
+        API --> DB[("Firebase Firestore")]
     end
 
     STT -->|Transcript| LLM
@@ -64,9 +64,9 @@ sequenceDiagram
     participant User
     participant Frontend
     participant Backend
-    participant Whisper as Whisper (STT)
-    participant Groq as Groq (LLM)
-    participant Piper as Piper (TTS)
+    participant Whisper as "Whisper (STT)"
+    participant Groq as "Groq (LLM)"
+    participant Piper as "Piper (TTS)"
 
     User->>Frontend: Speaks Answer
     Frontend->>Backend: Upload Audio (WAV)
