@@ -221,4 +221,3 @@ class AudioConversationOrchestrator:
         if os.path.exists(self.session_audio_dir):
             import shutil
             shutil.rmtree(self.session_audio_dir)
-            print(f"[ORCHESTRATOR] Deleted session audio directory: {self.session_audio_dir}")

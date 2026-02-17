@@ -13,8 +13,7 @@ interface ChatResponse {
     response: string | string[];  // Support both single string and array
     is_finished: boolean;
     depression_score: number | null;
-    semantic_risk_label: string | null;
-    consistency_status: string | null;
+    session_id: string | null;
 }
 
 const Chatbot = () => {
@@ -24,13 +23,14 @@ const Chatbot = () => {
     const [isStarted, setIsStarted] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [depressionScore, setDepressionScore] = useState<number | null>(null);
-    const [consistencyStatus, setConsistencyStatus] = useState<string | null>(null);
+
     const [isTyping, setIsTyping] = useState(false);
     const API_BASE_URL = `${getActiveApiUrl()}/api/v1/chat`;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const sessionIdRef = useRef<string | null>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,9 +50,12 @@ const Chatbot = () => {
     // Cleanup on page refresh/close if conversation is active but not finished
     useEffect(() => {
         const handleBeforeUnload = () => {
-            if (isStarted && !isFinished) {
+            if (isStarted && !isFinished && sessionIdRef.current) {
                 // sendBeacon is more reliable than fetch during page unload
-                navigator.sendBeacon(`${API_BASE_URL}/cleanup`);
+                navigator.sendBeacon(
+                    `${API_BASE_URL}/cleanup`,
+                    JSON.stringify({ session_id: sessionIdRef.current })
+                );
             }
         };
 
@@ -125,12 +128,16 @@ const Chatbot = () => {
         setIsStarted(true);
         setIsFinished(false);
         setDepressionScore(null);
-        setConsistencyStatus(null);
 
         typeMessage(introMsg, async () => {
             try {
                 // 2. Fetch First Question from Backend
                 const res = await axios.post<ChatResponse>(`${API_BASE_URL}/start`);
+
+                // Store server-generated session ID
+                if (res.data.session_id) {
+                    sessionIdRef.current = res.data.session_id;
+                }
 
                 // 3. Append Backend Question with typing animation
                 const responseParts = Array.isArray(res.data.response)
@@ -156,7 +163,8 @@ const Chatbot = () => {
 
         try {
             const res = await axios.post<ChatResponse>(`${API_BASE_URL}/message`, {
-                message: userMsg
+                message: userMsg,
+                session_id: sessionIdRef.current,
             });
 
             // Handle both single string and array responses
@@ -169,7 +177,7 @@ const Chatbot = () => {
                 if (res.data.is_finished) {
                     setIsFinished(true);
                     setDepressionScore(res.data.depression_score);
-                    setConsistencyStatus(res.data.consistency_status);
+
                 }
             });
         } catch (error) {
@@ -187,7 +195,6 @@ const Chatbot = () => {
         }
     };
 
-    // Helper to generate the detailed result message
     const getResultMessage = () => {
         if (depressionScore === null) return null;
 
@@ -196,34 +203,9 @@ const Chatbot = () => {
             ? "Our Artificial Intelligence Model predicts that you may have signs of depression."
             : "Our Artificial Intelligence Model predicts that you do not have any signs of depression.";
 
-        let semanticText = "";
-
-        if (consistencyStatus === 'conflict_potential_false_negative') {
-            semanticText = "However, our semantic analysis detected that your conversation style is similar to the style of people who were categorized as depressed. This suggests a potential risk despite the low score.";
-        } else if (consistencyStatus === 'conflict_potential_false_positive') {
-            semanticText = "However, our semantic analysis suggests your conversation style is more similar to healthy individuals. This might indicate a false positive, but we recommend consulting a professional to be sure.";
-        } else if (consistencyStatus === 'strong_agreement') {
-            semanticText = isDepressed
-                ? "Our semantic analysis also confirms this finding, showing a high similarity to patterns associated with depression."
-                : "Our semantic analysis also confirms this, showing your conversation style aligns with healthy patterns.";
-        }
-
         return (
             <div style={{ textAlign: 'left', marginTop: '20px' }}>
                 <p style={{ marginBottom: '10px', fontSize: '1.1rem' }}>{scoreText}</p>
-                {semanticText && (
-                    <div style={{
-                        padding: '15px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '10px',
-                        borderLeft: '4px solid #764ba2',
-                        marginTop: '15px'
-                    }}>
-                        <p style={{ margin: 0, fontSize: '0.95rem', color: '#ddd' }}>
-                            <strong>Semantic Analysis:</strong> {semanticText}
-                        </p>
-                    </div>
-                )}
             </div>
         );
     };

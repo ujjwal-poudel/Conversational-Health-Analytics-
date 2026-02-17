@@ -14,8 +14,7 @@ interface ChatResponse {
     response: string | string[];
     is_finished: boolean;
     depression_score: number | null;
-    semantic_risk_label: string | null;
-    consistency_status: string | null;
+    session_id: string | null;
 }
 
 const TextChat: React.FC = () => {
@@ -27,12 +26,13 @@ const TextChat: React.FC = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [_depressionScore, setDepressionScore] = useState<number | null>(null);
-    const [_consistencyStatus, setConsistencyStatus] = useState<string | null>(null);
+
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const hasStartedRef = useRef(false);
+    const sessionIdRef = useRef<string | null>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,7 +56,12 @@ const TextChat: React.FC = () => {
 
         return () => {
             // Cleanup on unmount
-            navigator.sendBeacon(`${API_BASE_URL}/cleanup`);
+            if (sessionIdRef.current) {
+                navigator.sendBeacon(
+                    `${API_BASE_URL}/cleanup`,
+                    JSON.stringify({ session_id: sessionIdRef.current })
+                );
+            }
         };
     }, []);
 
@@ -64,7 +69,12 @@ const TextChat: React.FC = () => {
     useEffect(() => {
         const handlePopState = () => {
             // Cleanup chat when user presses browser back
-            navigator.sendBeacon(`${API_BASE_URL}/cleanup`);
+            if (sessionIdRef.current) {
+                navigator.sendBeacon(
+                    `${API_BASE_URL}/cleanup`,
+                    JSON.stringify({ session_id: sessionIdRef.current })
+                );
+            }
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -74,7 +84,7 @@ const TextChat: React.FC = () => {
     // Handle back button click
     const handleBack = async () => {
         try {
-            await axios.post(`${API_BASE_URL}/cleanup`);
+            await axios.post(`${API_BASE_URL}/cleanup`, { session_id: sessionIdRef.current });
         } catch (e) {
             console.error('Cleanup error:', e);
         }
@@ -138,6 +148,10 @@ const TextChat: React.FC = () => {
         setIsLoading(true);
         try {
             const res = await axios.post<ChatResponse>(`${API_BASE_URL}/start`);
+            // Store server-generated session ID
+            if (res.data.session_id) {
+                sessionIdRef.current = res.data.session_id;
+            }
             const responseParts = Array.isArray(res.data.response)
                 ? res.data.response
                 : [res.data.response];
@@ -160,7 +174,8 @@ const TextChat: React.FC = () => {
 
         try {
             const res = await axios.post<ChatResponse>(`${API_BASE_URL}/message`, {
-                message: userMsg
+                message: userMsg,
+                session_id: sessionIdRef.current,
             });
 
             const responseParts = Array.isArray(res.data.response)
@@ -171,7 +186,7 @@ const TextChat: React.FC = () => {
                 if (res.data.is_finished) {
                     setIsFinished(true);
                     setDepressionScore(res.data.depression_score);
-                    setConsistencyStatus(res.data.consistency_status);
+
 
                     // Wait 3 seconds for user to read final message, then navigate to results
                     setTimeout(() => {

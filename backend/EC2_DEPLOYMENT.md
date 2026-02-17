@@ -1,167 +1,158 @@
 # EC2 Deployment Guide
 
-## ✅ Issues Fixed
+This guide details the steps to deploy the backend to an AWS EC2 instance. The process involves completely cleaning the existing Docker environment, uploading fresh code, and rebuilding the container.
 
-### 1. **Audio Model Paths** 
-- Fixed `audio_inference_service.py` to correctly find models in `models/` folder
-- Models now load from `backend/models/lasso/` and `backend/models/pca/`
+## Prerequisites
 
-### 2. **Health Endpoint**
-- Added `/health` endpoint for load balancer health checks
-- Returns status of all loaded models
+- **Groq API Key:** `<YOUR_GROQ_API_KEY>`
+- **SSH Key:** `ml-key.pem` (must be present in your local terminal directory)
+- **EC2 IP Address:** `<YOUR_EC2_IP>`
+- **User:** `ubuntu`
 
-### 3. **Models Included in Docker Image**
-- Updated `.dockerignore` to include models in the build (commented out exclusions)
-- Models will be bundled with the Docker image (~390 MB)
+---
 
-## 📦 Deployment Steps
+## 0. Connect to EC2
 
-### Step 1: Copy Models to Backend
+From your local terminal (ensure `ml-key.pem` is in the current directory):
 
-Make sure these files exist in your backend folder before building:
 ```bash
-backend/models/roberta/model_2_13.pt          # 326 MB
-backend/models/lasso/lasso_final_v8/          # 1.1 MB (folder with scaler, selector, model)
-backend/models/pca/pca_wav2vec2.joblib        # 1.2 MB
-backend/models/piper/en_US-lessac-medium.onnx # 60 MB
+ssh -i ml-key.pem ubuntu@<YOUR_EC2_IP>
 ```
 
-### Step 2: Build Docker Image on EC2
+---
+
+## 1. Clean Docker Environment
+
+On the EC2 instance, remove all existing containers, images, volumes, and build cache to ensure a clean slate.
 
 ```bash
-cd backend
-docker build -t depression-backend:latest .
+# Stop all running containers
+docker ps -aq | xargs -r docker stop
+
+# Remove all containers
+docker ps -aq | xargs -r docker rm -f
+
+# Remove all images
+docker images -aq | xargs -r docker rmi -f
+
+# Remove all volumes
+docker volume ls -q | xargs -r docker volume rm -f
+
+# Prune system (networks, images, build cache)
+docker system prune -af --volumes
+docker builder prune -af
 ```
 
-### Step 3: Run Container
+Verify everything is clean:
 
 ```bash
-docker run -d \
-  --name depression-app \
+docker ps -a
+docker images
+docker system df
+df -h
+```
+
+---
+
+## 2. Remove Project Files
+
+On the EC2 instance, remove the previous project directories.
+
+```bash
+rm -rf ~/backend ~/app
+```
+
+Optional: If you need to clear persisted data (models/user_data), run:
+
+```bash
+sudo rm -rf /opt/models /opt/user_data
+```
+
+---
+
+## 3. Upload Fresh Code
+
+Exit the EC2 session to return to your local machine:
+
+```bash
+exit
+```
+
+From your local terminal, upload the backend code to the EC2 instance:
+
+```bash
+scp -i ml-key.pem -r \
+/path/to/your/local/backend \
+ubuntu@<YOUR_EC2_IP>:~
+```
+
+This will create a `~/backend` directory on the EC2 instance containing your latest code.
+
+---
+
+## 4. Build and Run
+
+SSH back into the EC2 instance:
+
+```bash
+ssh -i ml-key.pem ubuntu@<YOUR_EC2_IP>
+```
+
+### Setup Persistent Directories
+
+Create and set permissions for directories that will persist data outside the container:
+
+```bash
+sudo mkdir -p /opt/models /opt/user_data
+sudo chown -R 1000:1000 /opt/models /opt/user_data
+sudo chmod -R 775 /opt/models /opt/user_data
+```
+
+### Configure Environment
+
+Navigate to the backend directory and set up the environment variables:
+
+```bash
+cd ~/backend
+cp .env.example .env
+```
+
+Open `.env` to add your API keys and configuration:
+
+```bash
+nano .env
+```
+
+**Required changes in `.env`:**
+- Set `GROQ_API_KEY` to your key
+- Ensure `FIREBASE_CREDENTIALS_PATH` is correct (filename matches upload)
+
+### Build Docker Image
+
+```bash
+docker build -t depression-app:latest .
+```
+
+### Run Container
+
+Start the container with volume mounts for persistence:
+
+```bash
+docker run -d --name depression-app \
   -p 8000:8000 \
-  --restart unless-stopped \
-  depression-backend:latest
+  -v /opt/user_data:/app/user_data \
+  -v /opt/models:/opt/models \
+  depression-app:latest
 ```
 
-### Step 4: Verify Health
+### Verify Deployment
+
+Check that the container is running and view logs:
 
 ```bash
-curl http://localhost:8000/health
-```
-
-Expected response:
-```json
-{
-  "status": "healthy",
-  "service": "conversational-health-analytics",
-  "models_loaded": {
-    "depression_model": true,
-    "audio_service": true,
-    "conversation_engine": true
-  }
-}
-```
-
-## 🔧 LLM Configuration
-
-### Option 1: Template Fallback (Current - No Setup Needed)
-- **Status**: Already working
-- **Behavior**: Uses predefined question templates (no LLM paraphrasing)
-- **Pros**: No external dependencies, works immediately
-- **Cons**: Questions sound more scripted
-
-### Option 2: Install Ollama in Docker
-Add to Dockerfile before `USER appuser`:
-```dockerfile
-RUN curl -fsSL https://ollama.com/install.sh | sh
-```
-
-Set environment variable:
-```bash
-docker run -d \
-  -e USE_OLLAMA=true \
-  -e OLLAMA_MODEL=llama3.2 \
-  ...
-```
-
-### Option 3: Use Gemini API (Cloud)
-Set environment variable:
-```bash
-docker run -d \
-  -e USE_OLLAMA=false \
-  -e GEMINI_API_KEY=your_api_key_here \
-  ...
-```
-
-## 🌐 Expose to Public (Optional)
-
-### Using nginx reverse proxy:
-```bash
-sudo apt install nginx
-```
-
-Create `/etc/nginx/sites-available/depression-app`:
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Enable and restart:
-```bash
-sudo ln -s /etc/nginx/sites-available/depression-app /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-## 📊 Resource Requirements
-
-**Minimum**: t3.medium (2 vCPU, 4 GB RAM)
-**Recommended**: t3.large (2 vCPU, 8 GB RAM) for better performance
-
-### Memory Usage:
-- Docker Base: ~200 MB
-- RoBERTa Model: 326 MB
-- Wav2Vec2: 722 MB (auto-downloads on first use)
-- faster-whisper: 461 MB (auto-downloads)
-- Lasso + PCA: 2.3 MB
-- Piper TTS: 60 MB
-- **Total**: ~1.77 GB + OS overhead
-
-## 🐛 Troubleshooting
-
-### Check logs:
-```bash
+docker ps
 docker logs -f depression-app
 ```
 
-### Models not loading:
-```bash
-docker exec depression-app ls -lh models/roberta/
-docker exec depression-app ls -lh models/lasso/
-docker exec depression-app ls -lh models/pca/
-```
-
-### Restart container:
-```bash
-docker restart depression-app
-```
-
-### Rebuild from scratch:
-```bash
-docker stop depression-app
-docker rm depression-app
-docker rmi depression-backend:latest
-docker build -t depression-backend:latest .
-docker run -d --name depression-app -p 8000:8000 depression-backend:latest
-```
+The application will be available at: `http://<YOUR_EC2_IP>:8000`
+Docs available at: `http://<YOUR_EC2_IP>:8000/docs`

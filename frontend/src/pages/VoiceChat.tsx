@@ -10,7 +10,6 @@ interface AudioChatResponse {
     response_audio_paths: string[];
     is_finished: boolean;
     depression_score?: number;
-    consistency_status?: string;
 }
 
 type MicStatus = 'pending' | 'granted' | 'denied';

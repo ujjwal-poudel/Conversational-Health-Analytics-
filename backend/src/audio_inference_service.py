@@ -46,11 +46,7 @@ class AudioConfig:
         os.path.join(backend_dir, "models/pca/pca_wav2vec2.joblib")
     )
     
-    # Fallback to external drive if local doesn't exist (development)
-    if not os.path.exists(LASSO_MODEL_DIR):
-        LASSO_MODEL_DIR = "/Volumes/MACBACKUP/models/saved_models/lasso_final_v8"
-    if not os.path.exists(PCA_PATH):
-        PCA_PATH = "/Volumes/MACBACKUP/audio_data_folder/models/pca_wav2vec2.joblib"
+
     
     # Audio parameters (must match training)
     AUDIO_SR = 16000
@@ -590,17 +586,7 @@ class AudioInferenceService:
 # =============================================================================
 
 if __name__ == "__main__":
-    print("Testing Audio Inference Service...")
-    
     service = AudioInferenceService()
     service.load_models()
-    
-    # Test with a sample file if available
-    test_path = "/Volumes/MACBACKUP/conversation_audio/test_user_only.wav"
-    
-    if os.path.exists(test_path):
-        score = service.predict(test_path)
-        print(f"Test prediction: {score}")
-    else:
-        print(f"Test file not found: {test_path}")
-        print("Service loaded successfully - ready for use.")
+    print("Audio Inference Service loaded successfully.")
+

@@ -6,6 +6,9 @@ uvicorn[standard]==0.24.0
 sqlalchemy==1.4.46
 alembic==1.12.1
 
+# Firebase
+firebase-admin>=6.0.0
+
 # Data Validation
 pydantic>=2.9.0
 

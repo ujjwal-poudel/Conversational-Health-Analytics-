@@ -62,10 +62,6 @@ MODEL_PATH = os.getenv(
     os.path.join(os.path.dirname(os.path.dirname(__file__)), "models/roberta/model_2_13.pt")
 )
 
-# Fallback to external drive if local doesn't exist (development)
-if not os.path.exists(MODEL_PATH):
-    MODEL_PATH = "/Volumes/MACBACKUP/models/saved_models/robert_multilabel_no-regression_/model_2_15.pt"
-
 # Pre-trained tokenizer name (must match what was used in training).
 TOKENIZER_NAME = "sentence-transformers/all-distilroberta-v1"
 
@@ -172,7 +168,6 @@ def get_depression_score(
 
     # 2. Run Encoder in Batches
     # This loop processes the turns in small chunks to avoid OOM
-    print(f"Total turns: {len(transcript_turns)}. Processing in chunks of {turn_batch_size}...")
     for i in range(0, len(transcript_turns), turn_batch_size):
         # Create a small batch of input_ids and attention_masks
         batch_input_ids = torch.tensor(

@@ -16,8 +16,6 @@ interface AudioChatResponse {
     response_audio_paths: string[];
     is_finished: boolean;
     depression_score?: number;
-    semantic_risk_label?: string;
-    consistency_status?: string;
     merged_audio?: {
         user_only_path: string;
         full_conversation_path: string;

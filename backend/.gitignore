@@ -79,3 +79,6 @@ uploads/features/
 
 backend/test_text_api.py
 backend/test_data_transformation.py
+
+# Firebase
+*firebase*.json

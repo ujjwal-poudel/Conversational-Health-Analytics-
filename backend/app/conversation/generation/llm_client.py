@@ -81,7 +81,6 @@ class LLMClient:
                 self.client = Groq(api_key=self.groq_api_key)
                 self.provider = "groq"
                 self.is_active = True
-                print(f"✅ Using Groq with model: {self.groq_model}")
                 return
             except Exception as e:
                 print(f"WARNING: Failed to initialize Groq client: {e}")
@@ -102,7 +101,7 @@ class LLMClient:
                 print(f"WARNING: Failed to initialize Gemini client: {e}")
         
         # 3. Nothing available
-        print("⚠️  No LLM provider available. LLM features will be disabled (fallback mode).")
+        print("No LLM provider available. LLM features will be disabled (fallback mode).")
     
     def _groq_generate(self, prompt, system_instruction=None):
         """Generate text using Groq API (non-streaming)."""

@@ -127,20 +127,13 @@ class LLMRewriter:
         Helper to query the LLM and clean the response.
         If LLM fails or is inactive, returns fallback_text.
         """
-        is_active = getattr(self.llm, 'is_active', False)
-        status_icon = "LLM Working" if is_active else "LLM Not Working"
-        print(f"\n[{status_icon} LLM STATUS] Active: {is_active}")
-        print(f"[ORIGINAL/FALLBACK] {fallback_text}")
-        
         raw = self.llm.get_response(prompt, system_instruction=system_instruction)
         
         # If LLM is inactive (returns None) or fails, use fallback
         if raw is None:
-            print(f"[RESULT] Using Fallback (LLM returned None)")
             return fallback_text
             
         cleaned = self._clean_response(raw)
-        print(f"[RESULT] LLM Generated: {cleaned}")
         return cleaned
 
     def classify_intent(self, user_text: str) -> str:

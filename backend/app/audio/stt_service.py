@@ -40,7 +40,6 @@ try:
         device="cpu",
         compute_type="int8"
     )
-    print(f"[STT] faster-whisper '{AudioConfig.WHISPER_MODEL_SIZE}' model loaded successfully")
 except Exception as error:
     raise RuntimeError(f"Failed to load faster-whisper model: {error}")
 
@@ -115,8 +114,6 @@ def transcribe_user_audio(audio_bytes: bytes, output_dir: str) -> Tuple[str, str
             ],
             "language": info.language
         }
-        
-        print(f"[STT] Transcribed: {transcript[:50]}...")
         
     except Exception as error:
         raise RuntimeError(f"faster-whisper transcription failed: {error}")
