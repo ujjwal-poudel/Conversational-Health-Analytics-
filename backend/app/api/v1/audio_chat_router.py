@@ -121,11 +121,13 @@ async def process_audio_turn(
                     # Audio merge disabled — no longer saving audio files to disk
                     user_audio_path = None
 
-                    # Run fusion if audio service available
                     if audio_service is not None and audio_service.is_loaded() and user_audio_path:
                         from src.fusion_service import get_fused_score
+                        from fastapi.concurrency import run_in_threadpool
 
-                        fusion_result = await get_fused_score(
+                        # Offload blocking Fusion inference
+                        fusion_result = await run_in_threadpool(
+                            get_fused_score,
                             transcript_turns=transcript,
                             audio_path=user_audio_path,
                             text_model=depression_model,
@@ -146,7 +148,11 @@ async def process_audio_turn(
                     else:
                         # Fallback to text-only
                         import inference_service
-                        raw_score = inference_service.get_depression_score(
+                        from fastapi.concurrency import run_in_threadpool
+                        
+                        # Offload blocking Text inference
+                        raw_score = await run_in_threadpool(
+                            inference_service.get_depression_score,
                             transcript_turns=transcript,
                             model=depression_model,
                             tokenizer=tokenizer,

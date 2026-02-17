@@ -144,23 +144,26 @@ class AudioConversationOrchestrator:
         """
         Execute the complete audio turn-processing pipeline.
         """
-        # Step 1: STT with timestamps (user audio not saved)
-        user_audio_path, transcript, timestamps = self.transcribe_user_audio(wav_bytes)
-        
-        # No longer track audio paths (not saved)
-        # self.interleaved_audio_paths.append(user_audio_path)
+        from fastapi.concurrency import run_in_threadpool
 
-        # Step 2: Conversation logic (returns list of message parts)
-        bot_response_text = self.update_conversation_with_transcript(transcript)
+        # Step 1: STT with timestamps (Offload blocking Whisper inference)
+        # user_audio_path is None (not saved)
+        user_audio_path, transcript, timestamps = await run_in_threadpool(
+            self.transcribe_user_audio, wav_bytes
+        )
+        
+        # Step 2: Conversation logic (Offload blocking LLM generation)
+        # Returns list of message parts
+        bot_response_text = await run_in_threadpool(
+            self.update_conversation_with_transcript, transcript
+        )
 
         # Step 3: TTS - synthesize each message part
+        # atomic TTS generation is already async (subprocess based)
         audio_paths = []
         for text in bot_response_text:
             audio_path = await self.synthesize_question_audio(text)
             audio_paths.append(audio_path)
-            # Still track bot audio for cleanup, but don't merge
-            # self.bot_audio_paths.append(audio_path)
-            # self.interleaved_audio_paths.append(audio_path)
 
         return {
             "transcript": transcript,

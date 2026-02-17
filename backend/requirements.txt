@@ -2,25 +2,17 @@
 fastapi>=0.115.0
 uvicorn[standard]==0.24.0
 
-# Database
-sqlalchemy==1.4.46
-alembic==1.12.1
-
 # Firebase
 firebase-admin>=6.0.0
 
 # Data Validation
 pydantic>=2.9.0
 
-# Authentication & Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-
 # File Upload & Processing
 python-multipart==0.0.6
 pydub==0.25.1
 
-# HTTP Client (for Ollama API)
+# HTTP Client
 requests>=2.31.0
 
 # Groq LLM (primary provider)
@@ -28,7 +20,7 @@ groq>=0.4.0
 
 # Text-to-Speech (Piper TTS)
 piper-tts>=1.2.0
-pathvalidate>=3.0.0  # Required by piper-tts
+pathvalidate>=3.0.0
 
 # Speech-to-Text (faster-whisper)
 faster-whisper>=1.0.0
@@ -52,6 +44,3 @@ scikit-learn>=1.3.0
 # Utilities
 python-dotenv>=1.0.0
 tokenizers>=0.13.0
-
-# Optional: Gemini LLM (uncomment if needed)
-# google-genai>=1.0.0

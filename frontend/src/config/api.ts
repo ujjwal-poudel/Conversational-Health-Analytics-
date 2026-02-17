@@ -8,7 +8,9 @@
  */
 
 // Available endpoints (priority order)
-const CLOUD_API = 'https://penalty-publicity-vintage-gamecube.trycloudflare.com';
+// 1. Environment variable (for Production/Render)
+const ENV_API = import.meta.env.VITE_API_URL;
+// 2. Localhost fallback (for Development)
 const LOCAL_API = 'http://localhost:8000';
 
 // Cache key for localStorage
@@ -21,6 +23,7 @@ let selectedEndpoint: string | null = null;
  * Test if an API endpoint is reachable
  */
 async function testEndpoint(url: string): Promise<boolean> {
+    if (!url) return false;
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
@@ -77,8 +80,7 @@ function cacheEndpoint(endpoint: string): void {
 
 /**
  * Select the best available API endpoint
- * Tries cloud first, falls back to local
- * Returns immediately with cached/default if checkHealth=false
+ * Tries env var first, falls back to local
  */
 async function selectBestEndpoint(checkHealth: boolean = true): Promise<string> {
     // Check cache first
@@ -102,47 +104,44 @@ async function selectBestEndpoint(checkHealth: boolean = true): Promise<string> 
         localStorage.removeItem(CACHE_KEY);
     }
 
-    // If not checking health, return local default immediately
+    // If not checking health, return Env or Local default immediately
     if (!checkHealth) {
-        console.log('🔍 [API Config] Using LOCAL endpoint (default, health check deferred)');
-        selectedEndpoint = LOCAL_API;
-        return LOCAL_API;
+        const defaultApi = ENV_API || LOCAL_API;
+        console.log(`🔍 [API Config] Using default endpoint: ${defaultApi} (health check deferred)`);
+        selectedEndpoint = defaultApi;
+        return defaultApi;
     }
 
     console.log('🔍 [API Config] Testing endpoints...');
 
-    // Try local first (priority for development)
+    // 1. Try Environment Variable (Production)
+    if (ENV_API) {
+        console.log(`   Trying configured API: ${ENV_API}`);
+        const envWorks = await testEndpoint(ENV_API);
+        if (envWorks) {
+            console.log('✅ [API Config] Using Configured API:', ENV_API);
+            selectedEndpoint = ENV_API;
+            cacheEndpoint(ENV_API);
+            return ENV_API;
+        }
+        console.log('❌ [API Config] Configured API not reachable');
+    }
+
+    // 2. Try Localhost (Development)
     console.log(`   Trying local: ${LOCAL_API}`);
     const localWorks = await testEndpoint(LOCAL_API);
-
     if (localWorks) {
         console.log('✅ [API Config] Using LOCAL endpoint:', LOCAL_API);
-        console.log('   Running with local backend');
         selectedEndpoint = LOCAL_API;
         cacheEndpoint(LOCAL_API);
         return LOCAL_API;
     }
 
-    console.log('❌ [API Config] Local endpoint not reachable');
-
-    // Fallback to cloud
-    console.log(`   Trying cloud: ${CLOUD_API}`);
-    const cloudWorks = await testEndpoint(CLOUD_API);
-
-    if (cloudWorks) {
-        console.log('✅ [API Config] Using CLOUD endpoint:', CLOUD_API);
-        console.log('   Cloud backend is online and healthy!');
-        selectedEndpoint = CLOUD_API;
-        cacheEndpoint(CLOUD_API);
-        return CLOUD_API;
-    }
-
-    // Neither works - default to local and let requests fail with proper errors
-    console.error('⚠️  [API Config] No backend available! Defaulting to local...');
-    console.error('   Please ensure backend is running (cloud or local)');
-    selectedEndpoint = LOCAL_API;
-    // Don't cache when nothing works
-    return LOCAL_API;
+    // Fallback: Default to Env if set, else Local
+    const fallback = ENV_API || LOCAL_API;
+    console.error(`⚠️  [API Config] No backend reachable! Defaulting to ${fallback}...`);
+    selectedEndpoint = fallback;
+    return fallback;
 }
 
 // Initialize endpoint selection

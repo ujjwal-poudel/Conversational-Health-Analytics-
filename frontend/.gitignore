@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment Variables (DO NOT COMMIT)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

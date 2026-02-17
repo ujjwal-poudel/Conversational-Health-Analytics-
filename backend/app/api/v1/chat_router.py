@@ -47,6 +47,10 @@ def _get_engine(session_id: Optional[str]) -> ConversationEngine:
 
 # ── Routes ───────────────────────────────────────────────────────────
 
+from fastapi.concurrency import run_in_threadpool
+
+# ... (imports)
+
 @router.post("/start", response_model=ChatResponse)
 async def start_chat(request: Request):
     _cleanup_stale_sessions()
@@ -55,27 +59,32 @@ async def start_chat(request: Request):
     if not templates_path:
         raise HTTPException(status_code=503, detail="Templates not initialized")
 
-    session_id = str(uuid.uuid4())
+    try:
+        session_id = str(uuid.uuid4())
 
-    new_engine = ConversationEngine(templates_base_path=templates_path)
-    _chat_sessions[session_id] = {
-        "engine": new_engine,
-        "created_at": time.time(),
-    }
+        new_engine = ConversationEngine(templates_base_path=templates_path)
+        _chat_sessions[session_id] = {
+            "engine": new_engine,
+            "created_at": time.time(),
+        }
 
-    first_message = new_engine.start()
+        # Offload blocking LLM generation to threadpool
+        first_message = await run_in_threadpool(new_engine.start)
 
-    if isinstance(first_message, str):
-        first_message = [first_message]
+        if isinstance(first_message, str):
+            first_message = [first_message]
 
-    print(f"\n  [CHAT] New session started ({session_id[:8]}...)")
+        print(f"\n  [CHAT] New session started ({session_id[:8]}...)")
 
-    return ChatResponse(
-        response=first_message,
-        is_finished=False,
-        depression_score=None,
-        session_id=session_id,
-    )
+        return ChatResponse(
+            response=first_message,
+            is_finished=False,
+            depression_score=None,
+            session_id=session_id,
+        )
+    except Exception as e:
+        print(f"  [CHAT] ERROR: Start failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/message", response_model=ChatResponse)
@@ -83,12 +92,18 @@ async def chat_message(request: Request, chat_request: ChatRequest):
     engine = _get_engine(chat_request.session_id)
 
     user_message = chat_request.message
-    bot_response = engine.process(user_message)
+    
+    # Offload blocking LLM generation to threadpool
+    try:
+        bot_response = await run_in_threadpool(engine.process, user_message)
+    except Exception as e:
+        print(f"  [CHAT] ERROR: Engine process failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate response: {e}")
 
     if isinstance(bot_response, str):
         bot_response = [bot_response]
 
-    is_finished = engine.is_finished()
+    is_finished = await run_in_threadpool(engine.is_finished)
     depression_score = None
 
     if is_finished:
@@ -99,7 +114,9 @@ async def chat_message(request: Request, chat_request: ChatRequest):
         if depression_model and tokenizer and device:
             transcript = engine.get_inference_pairs()
             try:
-                depression_score = inference_service.get_depression_score(
+                # Offload blocking inference to threadpool
+                depression_score = await run_in_threadpool(
+                    inference_service.get_depression_score,
                     transcript_turns=transcript,
                     model=depression_model,
                     tokenizer=tokenizer,
@@ -107,10 +124,12 @@ async def chat_message(request: Request, chat_request: ChatRequest):
                 )
                 print(f"  [CHAT] Conversation complete  |  Score: {depression_score:.4f}")
 
-                # Save to Firestore
+                # Save to Firestore (IO bound but fast, acceptable in threadpool or async)
                 try:
                     from app.services.firebase_service import save_conversation
-                    save_conversation(
+                    # Ideally firebase calls should be async or threadpool too if blocking
+                    await run_in_threadpool(
+                        save_conversation,
                         mode="text",
                         turns=transcript,
                         depression_score=depression_score,

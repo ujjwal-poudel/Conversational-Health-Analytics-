@@ -176,7 +176,14 @@ app.mount("/audio", StaticFiles(directory="audio_data"), name="audio")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this in production
+    # WARNING: allow_origins=["*"] is insecure for production.
+    # Restrict this to your frontend domain(s) before deploying.
+    # allow_origins=["*"],  # DISABLED for production security
+    allow_origins=[
+        "http://localhost:5173",  # Vite local
+        "http://localhost:3000",  # React local
+        "https://conversational-health-analytics.onrender.com", # Production Frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
