@@ -24,12 +24,12 @@ async function testEndpoint(url: string): Promise<boolean> {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-        
+
         const response = await fetch(`${url}/health`, {
             method: 'GET',
             signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
         return response.ok;
     } catch (error) {
@@ -44,15 +44,15 @@ function getCachedEndpoint(): string | null {
     try {
         const cached = localStorage.getItem(CACHE_KEY);
         if (!cached) return null;
-        
+
         const { endpoint, timestamp } = JSON.parse(cached);
         const age = Date.now() - timestamp;
-        
+
         // Cache valid for 5 minutes
         if (age < CACHE_TTL) {
             return endpoint;
         }
-        
+
         // Cache expired
         localStorage.removeItem(CACHE_KEY);
         return null;
@@ -86,12 +86,12 @@ async function selectBestEndpoint(checkHealth: boolean = true): Promise<string> 
     if (cached) {
         console.log('📦 [API Config] Using cached endpoint:', cached);
         selectedEndpoint = cached;
-        
+
         // If not checking health, return cached immediately
         if (!checkHealth) {
             return cached;
         }
-        
+
         // Verify cached endpoint still works
         const stillWorks = await testEndpoint(cached);
         if (stillWorks) {
@@ -101,34 +101,20 @@ async function selectBestEndpoint(checkHealth: boolean = true): Promise<string> 
         console.log('❌ [API Config] Cached endpoint no longer reachable, retesting...');
         localStorage.removeItem(CACHE_KEY);
     }
-    
-    // If not checking health, return cloud default immediately
+
+    // If not checking health, return local default immediately
     if (!checkHealth) {
-        console.log('🔍 [API Config] Using CLOUD endpoint (default, health check deferred)');
-        selectedEndpoint = CLOUD_API;
-        return CLOUD_API;
+        console.log('🔍 [API Config] Using LOCAL endpoint (default, health check deferred)');
+        selectedEndpoint = LOCAL_API;
+        return LOCAL_API;
     }
-    
+
     console.log('🔍 [API Config] Testing endpoints...');
-    
-    // Try cloud first (priority)
-    console.log(`   Trying cloud: ${CLOUD_API}`);
-    const cloudWorks = await testEndpoint(CLOUD_API);
-    
-    if (cloudWorks) {
-        console.log('✅ [API Config] Using CLOUD endpoint:', CLOUD_API);
-        console.log('   Cloud backend is online and healthy!');
-        selectedEndpoint = CLOUD_API;
-        cacheEndpoint(CLOUD_API);
-        return CLOUD_API;
-    }
-    
-    console.log('❌ [API Config] Cloud endpoint not reachable');
-    
-    // Fallback to local
+
+    // Try local first (priority for development)
     console.log(`   Trying local: ${LOCAL_API}`);
     const localWorks = await testEndpoint(LOCAL_API);
-    
+
     if (localWorks) {
         console.log('✅ [API Config] Using LOCAL endpoint:', LOCAL_API);
         console.log('   Running with local backend');
@@ -136,13 +122,27 @@ async function selectBestEndpoint(checkHealth: boolean = true): Promise<string> 
         cacheEndpoint(LOCAL_API);
         return LOCAL_API;
     }
-    
-    // Neither works - default to cloud and let requests fail with proper errors
-    console.error('⚠️  [API Config] No backend available! Defaulting to cloud...');
+
+    console.log('❌ [API Config] Local endpoint not reachable');
+
+    // Fallback to cloud
+    console.log(`   Trying cloud: ${CLOUD_API}`);
+    const cloudWorks = await testEndpoint(CLOUD_API);
+
+    if (cloudWorks) {
+        console.log('✅ [API Config] Using CLOUD endpoint:', CLOUD_API);
+        console.log('   Cloud backend is online and healthy!');
+        selectedEndpoint = CLOUD_API;
+        cacheEndpoint(CLOUD_API);
+        return CLOUD_API;
+    }
+
+    // Neither works - default to local and let requests fail with proper errors
+    console.error('⚠️  [API Config] No backend available! Defaulting to local...');
     console.error('   Please ensure backend is running (cloud or local)');
-    selectedEndpoint = CLOUD_API;
+    selectedEndpoint = LOCAL_API;
     // Don't cache when nothing works
-    return CLOUD_API;
+    return LOCAL_API;
 }
 
 // Initialize endpoint selection
@@ -156,7 +156,7 @@ export async function getApiUrl(): Promise<string> {
     if (selectedEndpoint) {
         return selectedEndpoint; // Already selected
     }
-    
+
     if (!endpointPromise) {
         // First call: check cache and verify it works
         const cached = getCachedEndpoint();
@@ -171,7 +171,7 @@ export async function getApiUrl(): Promise<string> {
             console.log('❌ [API Config] Cached endpoint failed, clearing cache');
             localStorage.removeItem(CACHE_KEY);
         }
-        
+
         // No valid cache: test endpoints and select best
         console.log('🔍 [API Config] Testing endpoints...');
         const endpoint = await selectBestEndpoint(true);
@@ -179,12 +179,12 @@ export async function getApiUrl(): Promise<string> {
         (globalThis as any).__ACTIVE_API_URL__ = endpoint;
         return endpoint;
     }
-    
+
     const endpoint = await endpointPromise;
-    
+
     // Update the exported constant for synchronous usage
     (globalThis as any).__ACTIVE_API_URL__ = endpoint;
-    
+
     return endpoint;
 }
 
@@ -194,13 +194,13 @@ export async function getApiUrl(): Promise<string> {
  */
 export function getActiveApiUrl(): string {
     // Prefer cloud with auto-failover to local
-    return selectedEndpoint || CLOUD_API;
+    return selectedEndpoint || LOCAL_API;
 }
 
 /**
  * Legacy export for compatibility (will be updated after initialization)
  */
-export const API_BASE_URL = CLOUD_API;
+export const API_BASE_URL = LOCAL_API;
 
 /**
  * Force re-check endpoints (useful for error recovery)
