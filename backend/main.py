@@ -182,7 +182,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",  # Vite local
         "http://localhost:3000",  # React local
-        "https://conversational-health-analytics.onrender.com", # Production Frontend
+        "http://localhost:3001",  # Vite local (alternate port)
+        "https://conversational-health-analytics-frontend.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
