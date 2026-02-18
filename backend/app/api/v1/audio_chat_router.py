@@ -23,6 +23,7 @@ from fastapi.responses import JSONResponse
 from app.conversation.controller.audio_conversation_controller import (
     AudioConversationController,
 )
+from app.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/audio/chat",
@@ -46,6 +47,7 @@ def _convert_path_to_url(path: str) -> str:
 
 
 @router.post("/start")
+@limiter.limit("10/minute")
 async def start_audio_chat(request: Request, session_id: str = Form(...)):
     """Start a new audio conversation."""
     templates_path = getattr(request.app.state, "templates_path", None)
@@ -79,6 +81,7 @@ async def start_audio_chat(request: Request, session_id: str = Form(...)):
 
 
 @router.post("/turn")
+@limiter.limit("15/minute")
 async def process_audio_turn(
     request: Request,
     session_id: str = Form(...),

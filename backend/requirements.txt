@@ -12,6 +12,9 @@ pydantic>=2.9.0
 python-multipart==0.0.6
 pydub==0.25.1
 
+# Rate Limiting
+slowapi>=0.1.9
+
 # HTTP Client
 requests>=2.31.0
 

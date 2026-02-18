@@ -6,6 +6,7 @@ from typing import Optional
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.conversation.engine import ConversationEngine
 import inference_service
+from app.middleware.rate_limiter import limiter
 
 router = APIRouter()
 
@@ -52,6 +53,7 @@ from fastapi.concurrency import run_in_threadpool
 # ... (imports)
 
 @router.post("/start", response_model=ChatResponse)
+@limiter.limit("10/minute")
 async def start_chat(request: Request):
     _cleanup_stale_sessions()
 
@@ -85,6 +87,71 @@ async def start_chat(request: Request):
     except Exception as e:
         print(f"  [CHAT] ERROR: Start failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/chat", response_model=ChatResponse)
+@limiter.limit("20/minute")
+async def chat(chat_request: ChatRequest, request: Request):
+    engine = _get_engine(chat_request.session_id)
+
+    user_message = chat_request.message
+    
+    # Offload blocking LLM generation to threadpool
+    try:
+        bot_response = await run_in_threadpool(engine.process, user_message)
+    except Exception as e:
+        print(f"  [CHAT] ERROR: Engine process failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate response: {e}")
+
+    if isinstance(bot_response, str):
+        bot_response = [bot_response]
+
+    is_finished = await run_in_threadpool(engine.is_finished)
+    depression_score = None
+
+    if is_finished:
+        depression_model = getattr(request.app.state, "depression_model", None)
+        tokenizer = getattr(request.app.state, "depression_tokenizer", None)
+        device = getattr(request.app.state, "device", None)
+
+        if depression_model and tokenizer and device:
+            transcript = engine.get_inference_pairs()
+            try:
+                # Offload blocking inference to threadpool
+                depression_score = await run_in_threadpool(
+                    inference_service.get_depression_score,
+                    transcript_turns=transcript,
+                    model=depression_model,
+                    tokenizer=tokenizer,
+                    device=device,
+                )
+                print(f"  [CHAT] Conversation complete  |  Score: {depression_score:.4f}")
+
+                # Save to Firestore (IO bound but fast, acceptable in threadpool or async)
+                try:
+                    from app.services.firebase_service import save_conversation
+                    # Ideally firebase calls should be async or threadpool too if blocking
+                    await run_in_threadpool(
+                        save_conversation,
+                        mode="text",
+                        turns=transcript,
+                        depression_score=depression_score,
+                        score_source="text",
+                    )
+                except Exception as e:
+                    print(f"  [CHAT] WARNING: Firestore save failed: {e}")
+
+            except Exception as e:
+                print(f"  [CHAT] ERROR: Scoring failed: {e}")
+        else:
+            print("  [CHAT] WARNING: Depression model not loaded. Skipping scoring.")
+
+    return ChatResponse(
+        response=bot_response,
+        is_finished=is_finished,
+        depression_score=depression_score,
+        session_id=chat_request.session_id,
+    )
 
 
 @router.post("/message", response_model=ChatResponse)

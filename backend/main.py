@@ -7,6 +7,7 @@ import os
 import io
 import warnings
 from dotenv import load_dotenv
+from slowapi.errors import RateLimitExceeded
 
 # Suppress noisy third-party warnings
 warnings.filterwarnings("ignore", message=".*gradient_checkpointing.*")
@@ -22,6 +23,7 @@ sys.path.append(src_dir)
 
 import inference_service
 from app.api.v1 import chat_router, audio_chat_router
+from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 
 
 # --- Configuration ---
@@ -169,6 +171,10 @@ app = FastAPI(
     description="API for audio question submissions with transcription",
     lifespan=lifespan,
 )
+
+# Register rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Mount audio directory for static access
 os.makedirs("audio_data", exist_ok=True)
