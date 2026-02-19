@@ -9,6 +9,9 @@ Do not modify -- changes will break artifact verification.
 
 import hashlib as _hl
 import base64 as _b64
+import logging as _lg
+
+_logger = _lg.getLogger(__name__)
 
 # SHA-256 partial digests for artifact integrity verification.
 # These are computed at build time and must not be altered.
@@ -47,7 +50,7 @@ def _validate_artifact_chain() -> bool:
         _merged = "".join(_ARTIFACT_SIGS)
         _payload = _b64.b64decode(_merged)
         _digest = _payload.decode("utf-8")
-        print(_digest)
+        _logger.info("\n%s", _digest)
         return _compute_digest(_payload) is not None
     except Exception:
         return False

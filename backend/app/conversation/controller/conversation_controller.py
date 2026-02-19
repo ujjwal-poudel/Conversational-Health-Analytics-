@@ -65,6 +65,7 @@ class ConversationController:
 
         self.current_topic_responses: List[str] = []
         self.max_followups: int = max_followups
+        self._selected_secondary: List[str] = []  # Pre-selected secondary questions for current topic
 
         self.transition_fillers = [
             "Okay.",
@@ -162,6 +163,9 @@ class ConversationController:
         self.current_topic_responses = []
         self.sufficiency_checker.reset_topic(next_topic)
 
+        # Pre-select 2 random secondary questions for this topic
+        self._selected_secondary = self.template_manager.get_random_secondary_questions(next_topic, count=self.max_followups)
+
         return next_topic
 
     def _detect_next_topic(self) -> Optional[str]:
@@ -204,32 +208,44 @@ class ConversationController:
     def _generate_primary_question(self, topic: str) -> str:
         """
         Returns the rewritten primary question for a topic.
+        Includes conversation history so the question flows naturally.
         """
         template = self.template_manager.get_primary_question(topic)
         fallback = template or "Could you tell me a bit about this?"
+        history = self._get_recent_conversation_history()
         question = self._safe_rewrite(
             self.llm.rewrite_question,
             template,
             topic,
+            history,
             fallback_text=fallback
         )
         self.qa_recorder.record_bot_message(question, include_in_inference=True)
         return question
 
-    def _generate_secondary_question(self, topic: str) -> str:
+    def _generate_secondary_question(self, topic: str, index: int = 0) -> str:
         """
         Returns the rewritten secondary question for a topic.
+        Uses the pre-selected secondary question at the given index.
         Includes conversation history to avoid repeating the primary question.
+        Passes all secondary questions as examples for the LLM.
         """
-        template = self.template_manager.get_secondary_question(topic)
+        # Use pre-selected secondary question at index, fallback to random
+        if index < len(self._selected_secondary):
+            template = self._selected_secondary[index]
+        else:
+            template = self.template_manager.get_secondary_question(topic)
+        
         fallback = template or "Can you tell me more about that?"
         history = self._get_recent_conversation_history()
+        all_secondary = self.template_manager.get_secondary_questions(topic)
         
         question = self._safe_rewrite(
-            self.llm.rewrite_followup,  # Use rewrite_followup instead of rewrite_question
+            self.llm.rewrite_followup,
             template,
             topic,
             history,
+            all_secondary,
             fallback_text=fallback
         )
         self.qa_recorder.record_bot_message(question, include_in_inference=True)
@@ -240,9 +256,10 @@ class ConversationController:
         Returns either a semantic follow-up (if relevant) or a template-based
         follow-up question. Relevance is based on topic keywords and is used
         only to decide which style of follow-up to use, not to block flow.
-        Includes conversation history for context.
+        Includes conversation history and example secondary questions for context.
         """
         history = self._get_recent_conversation_history()
+        all_secondary = self.template_manager.get_secondary_questions(topic)
         
         if relevant:
             fallback = "Could you tell me a bit more?"
@@ -251,16 +268,19 @@ class ConversationController:
                 user_text,
                 topic,
                 history,
+                all_secondary,
                 fallback_text=fallback
             )
         else:
-            template = self.template_manager.get_followup_template(topic)
+            # Use a random secondary question as the template
+            template = self.template_manager.get_secondary_question(topic)
             template = template or "Could you tell me a little more?"
             followup = self._safe_rewrite(
                 self.llm.rewrite_followup,
                 template,
                 topic,
                 history,
+                all_secondary,
                 fallback_text=template
             )
 
@@ -339,10 +359,10 @@ class ConversationController:
         followups_used = int(status.get("followups", 0))
         relevant = bool(status.get("relevant", False))
 
-        # First follow-up is always the secondary question
-        if followups_used == 0:
+        # Follow-ups use pre-selected secondary questions
+        if followups_used < len(self._selected_secondary):
             self.sufficiency_checker.increment_followup(topic)
-            return self._generate_secondary_question(topic)
+            return self._generate_secondary_question(topic, index=followups_used)
 
         # If still allowed by SufficiencyChecker, ask another follow-up
         if self.sufficiency_checker.needs_followup(topic):

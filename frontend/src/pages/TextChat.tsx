@@ -173,7 +173,7 @@ const TextChat: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const res = await axios.post<ChatResponse>(`${API_BASE_URL}/message`, {
+            const res = await axios.post<ChatResponse>(`${API_BASE_URL}/chat`, {
                 message: userMsg,
                 session_id: sessionIdRef.current,
             });

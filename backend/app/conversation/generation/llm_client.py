@@ -13,8 +13,11 @@ Requirements:
 """
 
 import os
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # Make Groq imports optional
 try:
@@ -22,8 +25,7 @@ try:
     GROQ_AVAILABLE = True
 except ImportError:
     GROQ_AVAILABLE = False
-    print("Warning: groq library not installed. Groq LLM features will be disabled.")
-    print("To enable: pip install groq")
+    logger.warning("groq library not installed. Groq LLM features will be disabled.")
 
 # Make Gemini imports optional (legacy fallback)
 try:
@@ -83,11 +85,11 @@ class LLMClient:
                 self.is_active = True
                 return
             except Exception as e:
-                print(f"WARNING: Failed to initialize Groq client: {e}")
+                logger.warning("Failed to initialize Groq client: %s", e)
         elif not GROQ_AVAILABLE:
-            print("Groq library not available, trying fallbacks...")
+            logger.info("Groq library not available, trying fallbacks...")
         elif not self.groq_api_key:
-            print("GROQ_API_KEY not set, trying fallbacks...")
+            logger.info("GROQ_API_KEY not set, trying fallbacks...")
         
         # 2. Try Gemini (legacy fallback)
         if GEMINI_AVAILABLE and self.gemini_api_key:
@@ -95,13 +97,13 @@ class LLMClient:
                 self.client = genai.Client(api_key=self.gemini_api_key)
                 self.provider = "gemini"
                 self.is_active = True
-                print(f"✅ Using Gemini with model: {self.gemini_model}")
+                logger.info("Using Gemini with model: %s", self.gemini_model)
                 return
             except Exception as e:
-                print(f"WARNING: Failed to initialize Gemini client: {e}")
+                logger.warning("Failed to initialize Gemini client: %s", e)
         
         # 3. Nothing available
-        print("No LLM provider available. LLM features will be disabled (fallback mode).")
+        logger.warning("No LLM provider available. LLM features will be disabled (fallback mode).")
     
     def _groq_generate(self, prompt, system_instruction=None):
         """Generate text using Groq API (non-streaming)."""
@@ -132,15 +134,15 @@ class LLMClient:
             if completion and completion.choices:
                 return completion.choices[0].message.content
             else:
-                print("Warning: Received an empty response from Groq.")
+                logger.warning("Received an empty response from Groq.")
                 return None
                 
         except Exception as e:
             error_str = str(e)
             if "429" in error_str or "rate_limit" in error_str.lower():
-                print(f"\n[LLM WARNING] Groq rate limit hit. Switching to fallback templates.")
+                logger.warning("Groq rate limit hit. Switching to fallback templates.")
             else:
-                print(f"\n[LLM Client Error] Groq: {type(e).__name__}: {e}")
+                logger.error("Groq: %s: %s", type(e).__name__, e)
             return None
 
     def _gemini_generate(self, prompt, system_instruction=None):
@@ -167,19 +169,19 @@ class LLMClient:
             if response and response.text:
                 return response.text
             else:
-                print("Warning: Received an empty response from Gemini.")
+                logger.warning("Received an empty response from Gemini.")
                 return None
 
         except errors.ClientError as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                print(f"\n[LLM WARNING] Gemini quota exhausted. Switching to fallback templates.")
+                logger.warning("Gemini quota exhausted. Switching to fallback templates.")
             elif "404" in str(e):
-                print(f"\n[LLM WARNING] Model {self.gemini_model} not found.")
+                logger.warning("Model %s not found.", self.gemini_model)
             else:
-                print(f"\n[LLM Client Error] Gemini: {type(e).__name__}: {e}")
+                logger.error("Gemini: %s: %s", type(e).__name__, e)
             return None
         except Exception as e:
-            print(f"\n[LLM Client Error] Gemini: {type(e).__name__}: {e}")
+            logger.error("Gemini: %s: %s", type(e).__name__, e)
             return None
 
     def get_response(self, prompt, system_instruction=None):
@@ -195,7 +197,7 @@ class LLMClient:
                  Returns None if the client is inactive (fallback mode).
         """
         if not self.is_active:
-            print("LLM Client is inactive. Skipping generation.")
+            logger.info("LLM Client is inactive. Skipping generation.")
             return None
 
         if self.provider == "groq":

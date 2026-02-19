@@ -1,50 +1,62 @@
 {
   "mood": {
     "primary": [
-      "So, how have you been feeling lately?"
+      "How have you been feeling lately?"
     ],
     "secondary": [
-      "What kinds of things have been influencing your mood these days?"
+      "Can you tell me more about that?",
+      "When did you first start feeling that way?",
+      "What’s been influencing your mood recently?"
     ]
   },
   "sleep": {
     "primary": [
-      "How’s your sleep been recently?"
+      "How has your sleep been lately?"
     ],
     "secondary": [
-      "Have you noticed anything changing with your sleep pattern?"
+      "Have you noticed any changes in your sleep recently?",
+      "What happens on nights when it’s harder to sleep?",
+      "When did you first notice those changes?"
     ]
   },
   "energy": {
     "primary": [
-      "How are your energy levels these days?"
+      "How has your energy been during the day lately?"
     ],
     "secondary": [
-      "Do you feel more tired or more energized than usual?"
+      "Do you find yourself feeling tired more often?",
+      "Can you give me an example from this week?",
+      "How has that been affecting your day?"
     ]
   },
   "interest": {
     "primary": [
-      "How interested have you been in the things you normally enjoy?"
+      "What have you been doing for fun or to relax lately?"
     ],
     "secondary": [
-      "Have you felt any shift in what you feel like doing lately?"
+      "How did that feel compared to how it used to feel?",
+      "Is there something you normally enjoy that’s been harder to get into?",
+      "When was the last time you really enjoyed something?"
     ]
   },
   "daily_functioning": {
     "primary": [
-      "How have your daily routines been going?"
+      "How have things been going day to day?"
     ],
     "secondary": [
-      "Has anything been making your everyday tasks easier or tougher recently?"
+      "What’s been harder than usual recently?",
+      "How has that been affecting school, work, or your routines?",
+      "Can you walk me through a typical day lately?"
     ]
   },
   "movement": {
     "primary": [
-      "Have you been feeling more restless or kind of slowed down lately?"
+      "Have you been feeling more restless or more slowed down lately?"
     ],
     "secondary": [
-      "Have you noticed any changes in how quickly or slowly you’ve been moving?"
+      "When do you notice that the most?",
+      "What does that look like during the day?",
+      "Has anyone else commented on it?"
     ]
   }
 }

@@ -17,8 +17,12 @@ AudioConversationController, ensuring a clean separation between:
     - Core conversation engine
 """
 
+import time
+import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 from app.conversation.controller.audio_conversation_controller import (
     AudioConversationController,
@@ -61,11 +65,14 @@ async def start_audio_chat(request: Request, session_id: str = Form(...)):
             templates_base_path=templates_path
         )
 
-        _audio_sessions[session_id] = controller
+        _audio_sessions[session_id] = {
+            "controller": controller,
+            "created_at": time.time(),
+        }
 
         result = await controller.start_conversation()
 
-        print(f"\n  [AUDIO] New session started ({session_id})")
+        logger.info("New audio session started (%s)", session_id)
 
         if 'response_audio_paths' in result:
             result['response_audio_paths'] = [_convert_path_to_url(p) for p in result['response_audio_paths']]
@@ -73,10 +80,10 @@ async def start_audio_chat(request: Request, session_id: str = Form(...)):
         return JSONResponse(content=result)
 
     except Exception as e:
-        print(f"  [AUDIO] ERROR: Failed to start session: {e}")
+        logger.error("Failed to start audio session: %s", e)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to start audio conversation: {str(e)}"
+            detail="Failed to start audio conversation"
         )
 
 
@@ -88,13 +95,15 @@ async def process_audio_turn(
     audio_file: UploadFile = File(...)
 ):
     """Process one conversational turn in audio mode."""
-    controller = _audio_sessions.get(session_id)
+    session = _audio_sessions.get(session_id)
 
-    if not controller:
+    if not session:
         raise HTTPException(
             status_code=400,
             detail=f"No active conversation for session {session_id}. Please call /start first."
         )
+
+    controller = session["controller"]
 
     if audio_file is None:
         raise HTTPException(status_code=400, detail="Missing audio file input.")
@@ -166,7 +175,7 @@ async def process_audio_turn(
                     if raw_score is not None:
                         depression_score = raw_score
 
-                        print(f"  [AUDIO] Conversation complete  |  Score: {depression_score:.4f} ({score_source})")
+                        logger.info("Conversation complete  |  Score: %.4f (%s)", depression_score, score_source)
 
                         # Save to Firestore
                         try:
@@ -178,20 +187,18 @@ async def process_audio_turn(
                                 score_source=score_source,
                             )
                         except Exception as e:
-                            print(f"  [AUDIO] WARNING: Firestore save failed: {e}")
+                            logger.warning("Firestore save failed: %s", e)
                     else:
-                        print("  [AUDIO] WARNING: No score available")
+                        logger.warning("No score available")
 
                     result['depression_score'] = depression_score
                     result['score_source'] = score_source
 
                 else:
-                    print("  [AUDIO] WARNING: Depression model not loaded. Skipping scoring.")
+                    logger.warning("Depression model not loaded. Skipping scoring.")
 
             except Exception as e:
-                print(f"  [AUDIO] ERROR: Final processing failed: {e}")
-                import traceback
-                traceback.print_exc()
+                logger.error("Final processing failed: %s", e, exc_info=True)
 
         # Convert audio paths to URLs
         if 'response_audio_paths' in result:
@@ -200,25 +207,27 @@ async def process_audio_turn(
         return JSONResponse(content=result)
 
     except Exception as e:
-        print(f"  [AUDIO] ERROR: Turn processing failed: {e}")
+        logger.error("Turn processing failed: %s", e)
         raise HTTPException(
             status_code=500,
-            detail=f"Audio conversation processing failed: {str(e)}"
+            detail="Audio conversation processing failed"
         )
 
 
 @router.post("/cleanup")
 async def cleanup_session(session_id: str = Form(...)):
     """Clean up session audio files."""
-    controller = _audio_sessions.get(session_id)
-    if not controller:
+    session = _audio_sessions.get(session_id)
+    if not session:
         return JSONResponse(content={"status": "skipped", "reason": "Session not found"})
+
+    controller = session["controller"]
 
     try:
         controller.cleanup_session()
         del _audio_sessions[session_id]
-        print(f"  [AUDIO] Session {session_id} cleaned up.")
+        logger.info("Audio session %s cleaned up.", session_id)
         return JSONResponse(content={"status": "success"})
     except Exception as e:
-        print(f"  [AUDIO] ERROR: Cleanup failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Cleanup failed: %s", e)
+        raise HTTPException(status_code=500, detail="Cleanup failed")

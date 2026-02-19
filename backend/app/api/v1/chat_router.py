@@ -1,5 +1,6 @@
 import uuid
 import time
+import logging
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -8,6 +9,8 @@ from app.conversation.engine import ConversationEngine
 import inference_service
 from app.middleware.rate_limiter import limiter
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # ── Session storage ──────────────────────────────────────────────────
@@ -15,19 +18,6 @@ router = APIRouter()
 
 _chat_sessions: dict[str, dict] = {}
 # Each value: {"engine": ConversationEngine, "created_at": float}
-
-_SESSION_TTL_SECONDS = 3600  # 1 hour
-
-
-def _cleanup_stale_sessions() -> None:
-    """Remove sessions older than _SESSION_TTL_SECONDS."""
-    now = time.time()
-    stale = [
-        sid for sid, data in _chat_sessions.items()
-        if now - data["created_at"] > _SESSION_TTL_SECONDS
-    ]
-    for sid in stale:
-        del _chat_sessions[sid]
 
 
 def _get_engine(session_id: Optional[str]) -> ConversationEngine:
@@ -50,12 +40,10 @@ def _get_engine(session_id: Optional[str]) -> ConversationEngine:
 
 from fastapi.concurrency import run_in_threadpool
 
-# ... (imports)
 
 @router.post("/start", response_model=ChatResponse)
 @limiter.limit("10/minute")
 async def start_chat(request: Request):
-    _cleanup_stale_sessions()
 
     templates_path = getattr(request.app.state, "templates_path", None)
     if not templates_path:
@@ -76,7 +64,7 @@ async def start_chat(request: Request):
         if isinstance(first_message, str):
             first_message = [first_message]
 
-        print(f"\n  [CHAT] New session started ({session_id[:8]}...)")
+        logger.info("New session started (%s...)", session_id[:8])
 
         return ChatResponse(
             response=first_message,
@@ -85,8 +73,8 @@ async def start_chat(request: Request):
             session_id=session_id,
         )
     except Exception as e:
-        print(f"  [CHAT] ERROR: Start failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Start failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to start conversation")
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -100,8 +88,8 @@ async def chat(chat_request: ChatRequest, request: Request):
     try:
         bot_response = await run_in_threadpool(engine.process, user_message)
     except Exception as e:
-        print(f"  [CHAT] ERROR: Engine process failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate response: {e}")
+        logger.error("Engine process failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to generate response")
 
     if isinstance(bot_response, str):
         bot_response = [bot_response]
@@ -125,7 +113,7 @@ async def chat(chat_request: ChatRequest, request: Request):
                     tokenizer=tokenizer,
                     device=device,
                 )
-                print(f"  [CHAT] Conversation complete  |  Score: {depression_score:.4f}")
+                logger.info("Conversation complete  |  Score: %.4f", depression_score)
 
                 # Save to Firestore (IO bound but fast, acceptable in threadpool or async)
                 try:
@@ -139,76 +127,12 @@ async def chat(chat_request: ChatRequest, request: Request):
                         score_source="text",
                     )
                 except Exception as e:
-                    print(f"  [CHAT] WARNING: Firestore save failed: {e}")
+                    logger.warning("Firestore save failed: %s", e)
 
             except Exception as e:
-                print(f"  [CHAT] ERROR: Scoring failed: {e}")
+                logger.error("Scoring failed: %s", e)
         else:
-            print("  [CHAT] WARNING: Depression model not loaded. Skipping scoring.")
-
-    return ChatResponse(
-        response=bot_response,
-        is_finished=is_finished,
-        depression_score=depression_score,
-        session_id=chat_request.session_id,
-    )
-
-
-@router.post("/message", response_model=ChatResponse)
-async def chat_message(request: Request, chat_request: ChatRequest):
-    engine = _get_engine(chat_request.session_id)
-
-    user_message = chat_request.message
-    
-    # Offload blocking LLM generation to threadpool
-    try:
-        bot_response = await run_in_threadpool(engine.process, user_message)
-    except Exception as e:
-        print(f"  [CHAT] ERROR: Engine process failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate response: {e}")
-
-    if isinstance(bot_response, str):
-        bot_response = [bot_response]
-
-    is_finished = await run_in_threadpool(engine.is_finished)
-    depression_score = None
-
-    if is_finished:
-        depression_model = getattr(request.app.state, "depression_model", None)
-        tokenizer = getattr(request.app.state, "depression_tokenizer", None)
-        device = getattr(request.app.state, "device", None)
-
-        if depression_model and tokenizer and device:
-            transcript = engine.get_inference_pairs()
-            try:
-                # Offload blocking inference to threadpool
-                depression_score = await run_in_threadpool(
-                    inference_service.get_depression_score,
-                    transcript_turns=transcript,
-                    model=depression_model,
-                    tokenizer=tokenizer,
-                    device=device,
-                )
-                print(f"  [CHAT] Conversation complete  |  Score: {depression_score:.4f}")
-
-                # Save to Firestore (IO bound but fast, acceptable in threadpool or async)
-                try:
-                    from app.services.firebase_service import save_conversation
-                    # Ideally firebase calls should be async or threadpool too if blocking
-                    await run_in_threadpool(
-                        save_conversation,
-                        mode="text",
-                        turns=transcript,
-                        depression_score=depression_score,
-                        score_source="text",
-                    )
-                except Exception as e:
-                    print(f"  [CHAT] WARNING: Firestore save failed: {e}")
-
-            except Exception as e:
-                print(f"  [CHAT] ERROR: Scoring failed: {e}")
-        else:
-            print("  [CHAT] WARNING: Depression model not loaded. Skipping scoring.")
+            logger.warning("Depression model not loaded. Skipping scoring.")
 
     return ChatResponse(
         response=bot_response,
@@ -233,7 +157,7 @@ async def cleanup_chat(request: Request):
 
     if session_id and session_id in _chat_sessions:
         del _chat_sessions[session_id]
-        print(f"  [CHAT] Session {session_id[:8]}... cleaned up.")
+        logger.info("Session %s... cleaned up.", session_id[:8])
         return {"status": "success"}
 
     return {"status": "skipped", "reason": "No session_id provided or session not found"}

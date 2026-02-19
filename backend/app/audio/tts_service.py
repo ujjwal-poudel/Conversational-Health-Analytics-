@@ -20,7 +20,10 @@ Key Features
 import os
 import uuid
 import asyncio
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 from app.audio.config import AudioConfig
 
 
@@ -113,11 +116,11 @@ async def synthesize_question_audio(text: str, output_dir: str = None) -> str:
         # Check for Piper errors
         if process.returncode != 0:
             error_msg = stderr.decode("utf-8")
-            print(f"[TTS ERROR] Piper failed: {error_msg}")
+            logger.error("Piper failed: %s", error_msg)
             raise RuntimeError(f"Piper TTS failed: {error_msg}")
 
     except Exception as e:
-        print(f"[TTS ERROR] Exception running Piper: {e}")
+        logger.error("Exception running Piper: %s", e)
         raise RuntimeError(f"Piper TTS subprocess execution error: {e}")
 
     # Validate that file exists

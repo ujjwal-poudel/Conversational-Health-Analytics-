@@ -6,8 +6,11 @@ Gracefully no-ops if Firebase is not configured (e.g. local dev without creds).
 """
 
 import os
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Module-level state
 _firestore_db = None
@@ -39,11 +42,11 @@ def init_firebase(cred_path: Optional[str] = None) -> bool:
     # Resolve credentials path
     path = cred_path or os.getenv("FIREBASE_CREDENTIALS_PATH")
     if not path:
-        print("[FIREBASE] No credentials path provided. Firestore disabled.")
+        logger.warning("No credentials path provided. Firestore disabled.")
         return False
 
     if not os.path.exists(path):
-        print(f"[FIREBASE] Credentials file not found: {path}. Firestore disabled.")
+        logger.warning("Credentials file not found: %s. Firestore disabled.", path)
         return False
 
     try:
@@ -53,10 +56,10 @@ def init_firebase(cred_path: Optional[str] = None) -> bool:
         cred = credentials.Certificate(path)
         firebase_admin.initialize_app(cred)
         _firestore_db = firestore.client()
-        print("[FIREBASE] Firestore initialized successfully.")
+        logger.info("Firestore initialized successfully.")
         return True
     except Exception as e:
-        print(f"[FIREBASE] Failed to initialize: {e}")
+        logger.error("Failed to initialize: %s", e)
         return False
 
 
@@ -86,7 +89,7 @@ def save_conversation(
         The Firestore document ID if saved, None if skipped/failed.
     """
     if _firestore_db is None:
-        print("[FIREBASE] Firestore not initialized. Skipping save.")
+        logger.info("Firestore not initialized. Skipping save.")
         return None
 
     try:
@@ -100,9 +103,9 @@ def save_conversation(
 
         doc_ref = _firestore_db.collection("conversations").add(doc_data)
         doc_id = doc_ref[1].id
-        print(f"[FIREBASE] Saved conversation to Firestore (doc: {doc_id})")
+        logger.info("Saved conversation to Firestore (doc: %s)", doc_id)
         return doc_id
 
     except Exception as e:
-        print(f"[FIREBASE] Failed to save conversation: {e}")
+        logger.error("Failed to save conversation: %s", e)
         return None
