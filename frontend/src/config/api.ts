@@ -172,8 +172,10 @@ export async function getApiUrl(): Promise<string> {
         }
 
         // No valid cache: test endpoints and select best
-        console.log('🔍 [API Config] Testing endpoints...');
-        const endpoint = await selectBestEndpoint(true);
+        console.log('🔍 [API Config] Selecting endpoint...');
+        // Disable health check if ENV_API is provided to avoid cold-start timeouts
+        const checkHealth = !ENV_API;
+        const endpoint = await selectBestEndpoint(checkHealth);
         selectedEndpoint = endpoint;
         (globalThis as any).__ACTIVE_API_URL__ = endpoint;
         return endpoint;
