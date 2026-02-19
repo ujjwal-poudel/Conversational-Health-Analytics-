@@ -196,10 +196,7 @@ export function getActiveApiUrl(): string {
     return selectedEndpoint || LOCAL_API;
 }
 
-/**
- * Legacy export for compatibility (will be updated after initialization)
- */
-export const API_BASE_URL = LOCAL_API;
+export const API_BASE_URL = ENV_API || LOCAL_API;
 
 /**
  * Force re-check endpoints (useful for error recovery)
