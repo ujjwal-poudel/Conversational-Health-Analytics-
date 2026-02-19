@@ -10,8 +10,8 @@
 // Available endpoints (priority order)
 // 1. Environment variable (for Production/Render) - MUST be set in Render dashboard
 const ENV_API = import.meta.env.VITE_API_URL;
-// 2. Localhost fallback (for Development)
-const LOCAL_API = 'http://localhost:8000';
+// 2. Localhost fallback (for Development) - configurable via env var
+const LOCAL_API = import.meta.env.VITE_FALLBACK_API_URL;
 
 // Cache key for localStorage
 const CACHE_KEY = 'preferred_api_endpoint';
