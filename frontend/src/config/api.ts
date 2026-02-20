@@ -17,7 +17,7 @@ const LOCAL_API = import.meta.env.VITE_FALLBACK_API_URL;
 const CACHE_KEY = 'preferred_api_endpoint';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-let selectedEndpoint: string | null = null;
+let selectedEndpoint: string | null = ENV_API || LOCAL_API;
 
 /**
  * Test if an API endpoint is reachable
