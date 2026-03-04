@@ -5,6 +5,7 @@ import ModeSelect from './pages/ModeSelect';
 import TextChat from './pages/TextChat';
 import VoiceChat from './pages/VoiceChat';
 import Results from './pages/Results';
+import About from './pages/About';
 import './App.css';
 
 // Wrapper component to handle refresh-to-home
@@ -16,7 +17,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     // Check if this is a fresh page load (refresh)
     const isInAppNavigation = sessionStorage.getItem('inAppNavigation');
 
-    if (!isInAppNavigation && location.pathname !== '/') {
+    if (!isInAppNavigation && location.pathname !== '/' && location.pathname !== '/about') {
       // Fresh load/refresh on a non-home page -> redirect to home
       navigate('/', { replace: true });
     }
@@ -34,6 +35,7 @@ function App() {
       <NavigationGuard>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
           <Route path="/mode" element={<ModeSelect />} />
           <Route path="/chat" element={<TextChat />} />
           <Route path="/audio" element={<VoiceChat />} />

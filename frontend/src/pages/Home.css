@@ -8,6 +8,7 @@
     padding: 40px;
     background: var(--bg-primary);
     overflow: hidden;
+    position: relative;
 }
 
 .home__content {
@@ -74,6 +75,31 @@
     transform: translateX(4px);
 }
 
+.home__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 50px;
+    margin-top: 10px;
+}
+
+.home__about-link {
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.home__about-link:hover {
+    color: var(--accent-teal);
+}
+
 .home__orb {
     flex-shrink: 0;
 }
@@ -94,8 +120,18 @@
         font-size: 1.2rem;
     }
 
+    .home__actions {
+        align-items: center;
+    }
+
     .home__orb :global(.gradient-orb--large) {
         width: 280px;
         height: 280px;
+    }
+
+    .home__about-link {
+        top: 20px;
+        right: 20px;
+        font-size: 0.9rem;
     }
 }
